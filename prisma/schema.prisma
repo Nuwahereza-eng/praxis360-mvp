@@ -1,0 +1,319 @@
+// Praxis360 Prisma schema
+// Note: SQLite for local demo. Enums are represented as strings for SQLite
+// compatibility but semantic values are kept as constants in src/lib/enums.ts.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String   @unique
+  passwordHash  String
+  role          String   // STUDENT | LECTURER | DEPARTMENT_OFFICER | QA | ADMIN
+  facultyId     String?
+  departmentId  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  faculty       Faculty?    @relation(fields: [facultyId], references: [id])
+  department    Department? @relation(fields: [departmentId], references: [id])
+
+  enrollments           Enrollment[]
+  taughtCourses         Course[]              @relation("LecturerCourses")
+  createdAssessments    Assessment[]          @relation("AssessmentCreator")
+  results               AssessmentResult[]    @relation("StudentResults")
+  learningGaps          LearningGap[]         @relation("StudentGaps")
+  correctionAttempts    CorrectionAttempt[]   @relation("StudentAttempts")
+  createdCorrections    CorrectionActivity[]  @relation("CorrectionCreator")
+  submittedIssues       Issue[]               @relation("IssueSubmitter")
+  assignedIssues        Issue[]               @relation("IssueOfficer")
+  issueUpdates          IssueUpdate[]
+  evaluationResponses   EvaluationResponse[]
+  notifications         Notification[]
+}
+
+model Faculty {
+  id          String @id @default(cuid())
+  name        String
+  code        String @unique
+  users       User[]
+  departments Department[]
+  courses     Course[]
+}
+
+model Department {
+  id         String  @id @default(cuid())
+  facultyId  String?
+  name       String
+  code       String  @unique
+  type       String  // ACADEMIC | SERVICE
+  faculty    Faculty? @relation(fields: [facultyId], references: [id])
+  users      User[]
+  courses    Course[]
+  issues     Issue[]
+  actions    InstitutionalAction[]
+}
+
+model Semester {
+  id                  String   @id @default(cuid())
+  name                String
+  academicYear        String
+  startDate           DateTime
+  endDate             DateTime
+  evaluationStartDate DateTime
+  evaluationEndDate   DateTime
+  status              String   // UPCOMING | ACTIVE | CLOSED
+  courses             Course[]
+  enrollments         Enrollment[]
+}
+
+model Course {
+  id           String @id @default(cuid())
+  code         String @unique
+  name         String
+  facultyId    String
+  departmentId String
+  semesterId   String
+  lecturerId   String
+
+  faculty     Faculty     @relation(fields: [facultyId], references: [id])
+  department  Department  @relation(fields: [departmentId], references: [id])
+  semester    Semester    @relation(fields: [semesterId], references: [id])
+  lecturer    User        @relation("LecturerCourses", fields: [lecturerId], references: [id])
+
+  enrollments      Enrollment[]
+  assessments      Assessment[]
+  learningOutcomes LearningOutcome[]
+  learningGaps     LearningGap[]
+  evaluationResponses EvaluationResponse[]
+}
+
+model Enrollment {
+  id         String @id @default(cuid())
+  studentId  String
+  courseId   String
+  semesterId String
+
+  student  User     @relation(fields: [studentId], references: [id])
+  course   Course   @relation(fields: [courseId], references: [id])
+  semester Semester @relation(fields: [semesterId], references: [id])
+
+  @@unique([studentId, courseId, semesterId])
+}
+
+model Assessment {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  type        String   // COURSEWORK | ASSIGNMENT | TEST | PROJECT | EXAM
+  description String
+  totalMarks  Int
+  passMark    Int
+  dueDate     DateTime
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  course     Course              @relation(fields: [courseId], references: [id])
+  creator    User                @relation("AssessmentCreator", fields: [createdBy], references: [id])
+  rubric     RubricCriterion[]
+  results    AssessmentResult[]
+  learningGaps LearningGap[]
+}
+
+model LearningOutcome {
+  id          String @id @default(cuid())
+  courseId    String
+  title       String
+  description String
+  course      Course @relation(fields: [courseId], references: [id])
+  rubric      RubricCriterion[]
+  gaps        LearningGap[]
+}
+
+model RubricCriterion {
+  id                String  @id @default(cuid())
+  assessmentId      String
+  learningOutcomeId String
+  title             String
+  description       String
+  maxMarks          Int
+  assessment        Assessment      @relation(fields: [assessmentId], references: [id])
+  learningOutcome   LearningOutcome @relation(fields: [learningOutcomeId], references: [id])
+  results           CriterionResult[]
+}
+
+model AssessmentResult {
+  id                 String   @id @default(cuid())
+  assessmentId       String
+  studentId          String
+  score              Float
+  percentage         Float
+  lecturerFeedback   String?
+  feedbackReleasedAt DateTime?
+  status             String   // PENDING | MARKED | RELEASED
+  createdAt          DateTime @default(now())
+
+  assessment        Assessment       @relation(fields: [assessmentId], references: [id])
+  student           User             @relation("StudentResults", fields: [studentId], references: [id])
+  criterionResults  CriterionResult[]
+
+  @@unique([assessmentId, studentId])
+}
+
+model CriterionResult {
+  id                  String @id @default(cuid())
+  assessmentResultId  String
+  rubricCriterionId   String
+  score               Float
+  feedback            String?
+
+  assessmentResult AssessmentResult @relation(fields: [assessmentResultId], references: [id], onDelete: Cascade)
+  rubricCriterion  RubricCriterion  @relation(fields: [rubricCriterionId], references: [id])
+}
+
+model LearningGap {
+  id                String   @id @default(cuid())
+  studentId         String
+  courseId          String
+  learningOutcomeId String
+  sourceAssessmentId String
+  severity          String   // RED | AMBER | GREEN
+  status            String   // IDENTIFIED | IN_PROGRESS | REASSESSED | RECOVERED | NEEDS_INTERVENTION
+  detectedAt        DateTime @default(now())
+
+  student         User            @relation("StudentGaps", fields: [studentId], references: [id])
+  course          Course          @relation(fields: [courseId], references: [id])
+  learningOutcome LearningOutcome @relation(fields: [learningOutcomeId], references: [id])
+  sourceAssessment Assessment     @relation(fields: [sourceAssessmentId], references: [id])
+
+  activities CorrectionActivity[]
+}
+
+model CorrectionActivity {
+  id             String   @id @default(cuid())
+  learningGapId  String
+  title          String
+  description    String
+  instructions   String
+  maxScore       Int
+  createdBy      String
+  dueDate        DateTime
+
+  gap      LearningGap         @relation(fields: [learningGapId], references: [id])
+  creator  User                @relation("CorrectionCreator", fields: [createdBy], references: [id])
+  attempts CorrectionAttempt[]
+}
+
+model CorrectionAttempt {
+  id                    String   @id @default(cuid())
+  correctionActivityId  String
+  studentId             String
+  score                 Float
+  submittedAt           DateTime @default(now())
+  feedback              String?
+  attemptNumber         Int
+
+  activity CorrectionActivity @relation(fields: [correctionActivityId], references: [id])
+  student  User               @relation("StudentAttempts", fields: [studentId], references: [id])
+}
+
+model Issue {
+  id             String   @id @default(cuid())
+  studentId      String?
+  title          String
+  description    String
+  category       String
+  issueType      String?
+  location       String?
+  priority       String   // LOW | MEDIUM | HIGH | CRITICAL
+  privacyMode    String   // IDENTIFIED | CONFIDENTIAL | ANONYMOUS
+  departmentId   String?
+  assignedOfficerId String?
+  status         String   // SUBMITTED | RECEIVED | ASSIGNED | IN_PROGRESS | ESCALATED | RESOLVED | VERIFIED | REOPENED
+  aiConfidence   Float?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  resolvedAt     DateTime?
+
+  student        User?       @relation("IssueSubmitter", fields: [studentId], references: [id])
+  department     Department? @relation(fields: [departmentId], references: [id])
+  assignedOfficer User?      @relation("IssueOfficer", fields: [assignedOfficerId], references: [id])
+  updates        IssueUpdate[]
+}
+
+model IssueUpdate {
+  id               String   @id @default(cuid())
+  issueId          String
+  authorId         String?
+  message          String
+  type             String   // NOTE | STATUS_CHANGE | STUDENT_UPDATE | RESOLUTION | VERIFICATION
+  visibleToStudent Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  issue  Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id])
+}
+
+model EvaluationQuestion {
+  id        String @id @default(cuid())
+  text      String
+  type      String // RATING | TEXT
+  orderIdx  Int
+  responses EvaluationResponse[]
+}
+
+model EvaluationResponse {
+  id          String   @id @default(cuid())
+  // Note: studentId is stored only to prevent duplicate submissions.
+  // It must never be exposed to lecturers or joined with lecturer-visible views.
+  studentId   String
+  courseId    String
+  questionId  String
+  rating      Int?
+  text        String?
+  createdAt   DateTime @default(now())
+
+  student  User               @relation(fields: [studentId], references: [id])
+  course   Course             @relation(fields: [courseId], references: [id])
+  question EvaluationQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([studentId, courseId, questionId])
+}
+
+model InstitutionalAction {
+  id                   String   @id @default(cuid())
+  title                String
+  issueSummary         String
+  evidence             String
+  actionTaken          String
+  responsibleDepartmentId String?
+  status               String   // PLANNED | IN_PROGRESS | COMPLETED
+  outcome              String?
+  published            Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  completedAt          DateTime?
+
+  responsibleDepartment Department? @relation(fields: [responsibleDepartmentId], references: [id])
+}
+
+model Notification {
+  id                String   @id @default(cuid())
+  userId            String
+  title             String
+  message           String
+  type              String
+  read              Boolean  @default(false)
+  relatedEntityType String?
+  relatedEntityId   String?
+  createdAt         DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+}
