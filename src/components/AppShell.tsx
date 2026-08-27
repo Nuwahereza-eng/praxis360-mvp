@@ -110,37 +110,41 @@ export async function AppShell({
         </form>
       </aside>
 
-      <div className="flex flex-col min-h-screen">
+      <div className="flex flex-col min-h-screen min-w-0">
         <header className="border-b border-outline-variant bg-surface-container-lowest">
-          <div className="flex items-center justify-between px-6 py-3">
-            <div>
-              <div className="text-xs uppercase tracking-wide text-on-surface-variant font-semibold">{ROLE_LABEL[role]}</div>
-              <div className="text-lg font-semibold">Welcome, {userName.split(" ")[0]}</div>
+          <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3">
+            <div className="min-w-0">
+              <div className="text-[10px] md:text-xs uppercase tracking-wide text-on-surface-variant font-semibold">{ROLE_LABEL[role]}</div>
+              <div className="text-base md:text-lg font-semibold truncate">Welcome, {userName.split(" ")[0]}</div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 shrink-0">
               <Link
                 href={`${roleBaseHref(role)}/notifications`}
-                className="relative btn-outline text-sm"
+                className="relative btn-outline text-xs md:text-sm"
               >
-                Notifications
+                <span className="hidden sm:inline">Notifications</span>
+                <span className="sm:hidden">Alerts</span>
                 {unread > 0 && (
                   <span className="absolute -top-1 -right-1 text-[10px] bg-error text-on-error rounded-full w-5 h-5 grid place-items-center font-bold">
                     {unread}
                   </span>
                 )}
               </Link>
+              <form action={logoutAction} className="md:hidden">
+                <button className="btn-outline text-xs" type="submit">Sign out</button>
+              </form>
             </div>
           </div>
           {/* Mobile nav */}
-          <div className="md:hidden overflow-x-auto whitespace-nowrap border-t border-outline-variant px-3 py-2 flex gap-2">
+          <div className="md:hidden overflow-x-auto whitespace-nowrap border-t border-outline-variant px-3 py-2 flex gap-2 -webkit-overflow-scrolling-touch">
             {nav.map((item) => (
-              <Link key={item.href} href={item.href} className="text-xs px-3 py-1.5 rounded-full bg-surface-container">
+              <Link key={item.href} href={item.href} className="text-xs px-3 py-1.5 rounded-full bg-surface-container shrink-0">
                 {item.label}
               </Link>
             ))}
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">{children}</main>
+        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto min-w-0">{children}</main>
       </div>
     </div>
   );

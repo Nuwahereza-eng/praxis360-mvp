@@ -1,10 +1,17 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Praxis360 — From Feedback to Improvement",
   description:
     "AI-powered university intelligence platform that closes the loop between feedback, student voice, teaching evaluation, and measurable institutional improvement.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: "#002045",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
