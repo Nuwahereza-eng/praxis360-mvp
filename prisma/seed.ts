@@ -384,6 +384,264 @@ async function main() {
   await prisma.notification.create({ data: { userId: ictOfficer.id, title: "New issue assigned", message: "Library Wi-Fi unreliable — please review.", type: "ISSUE" } });
   await prisma.notification.create({ data: { userId: qa.id, title: "Feedback turnaround exceeded in 3 courses", message: "Review QA insights for details.", type: "QA_INSIGHT" } });
 
+  // ---------------------------------------------------------------------------
+  // BROADEN DEMO DATA — populate every functionality with visible content.
+  // ---------------------------------------------------------------------------
+
+  // Rubrics + results for every other course/assessment so lecturer, QA, and
+  // learning-analytics pages all show numbers instead of empty tables.
+  const otherAssessments = [
+    { a: aSE2, lect: lect },
+    { a: aDB1, lect: lect2 },
+    { a: aRM1, lect: lect3 },
+    { a: aPM1, lect: lect3 },
+  ];
+
+  for (const { a } of otherAssessments) {
+    const los = await prisma.learningOutcome.findMany({ where: { courseId: a.courseId } });
+    if (los.length === 0) continue;
+
+    // 2 rubric criteria per assessment
+    const cA = await prisma.rubricCriterion.create({
+      data: {
+        assessmentId: a.id,
+        learningOutcomeId: los[0].id,
+        title: "Core Concepts",
+        description: "Command of the underlying concepts.",
+        maxMarks: Math.round(a.totalMarks * 0.6),
+      },
+    });
+    const cB = await prisma.rubricCriterion.create({
+      data: {
+        assessmentId: a.id,
+        learningOutcomeId: los[Math.min(1, los.length - 1)].id,
+        title: "Applied Practice",
+        description: "Applying concepts to the task.",
+        maxMarks: a.totalMarks - Math.round(a.totalMarks * 0.6),
+      },
+    });
+
+    // Enrollments for this course
+    const enrolled = await prisma.enrollment.findMany({ where: { courseId: a.courseId } });
+    for (let i = 0; i < enrolled.length; i++) {
+      const e = enrolled[i];
+      // ~85% of students have a result; released for past-due, marked for future-due
+      if (Math.random() < 0.15) continue;
+      const pct = Math.floor(35 + Math.random() * 60); // 35–95
+      const score = Math.round((pct / 100) * a.totalMarks);
+      const isPast = a.dueDate.getTime() < now.getTime();
+      const status = isPast ? "RELEASED" : Math.random() < 0.5 ? "MARKED" : "SUBMITTED";
+      const cAScore = Math.round(score * (0.5 + Math.random() * 0.2));
+      const cBScore = score - cAScore;
+
+      await prisma.assessmentResult.create({
+        data: {
+          assessmentId: a.id,
+          studentId: e.studentId,
+          score,
+          percentage: pct,
+          lecturerFeedback:
+            pct < 50
+              ? "Concepts are unclear; review the fundamentals and redo the practical section."
+              : pct < 70
+              ? "Solid attempt; strengthen your explanation and applied examples."
+              : "Excellent work with clear reasoning and application.",
+          feedbackReleasedAt: status === "RELEASED" ? new Date(a.dueDate.getTime() + Math.floor(Math.random() * 10) * 86400000) : null,
+          status,
+          criterionResults: {
+            create: [
+              { rubricCriterionId: cA.id, score: cAScore, feedback: pct < 50 ? "Weak grasp of core concepts." : "Concepts explained adequately." },
+              { rubricCriterionId: cB.id, score: cBScore, feedback: pct < 50 ? "Application is thin." : "Applied practice is sound." },
+            ],
+          },
+        },
+      });
+
+      // A gap for weak results, on the primary LO of that course
+      if (pct < 50 && status === "RELEASED") {
+        await prisma.learningGap.create({
+          data: {
+            studentId: e.studentId,
+            courseId: a.courseId,
+            learningOutcomeId: los[0].id,
+            sourceAssessmentId: a.id,
+            severity: pct < 40 ? "RED" : "AMBER",
+            status: Math.random() < 0.25 ? "RECOVERED" : Math.random() < 0.4 ? "IN_PROGRESS" : "IDENTIFIED",
+          },
+        });
+      }
+    }
+  }
+
+  // A correction activity + attempts on the primary student's gap so the
+  // "Learning Recovery" screen shows progress.
+  const primaryAttemptGap = gap;
+  const primaryCA = await prisma.correctionActivity.findFirst({ where: { learningGapId: primaryAttemptGap.id } });
+  if (primaryCA) {
+    await prisma.correctionAttempt.create({
+      data: {
+        correctionActivityId: primaryCA.id,
+        studentId: primaryStudent.id,
+        attemptNumber: 1,
+        score: 65,
+        feedback:
+          "Improved coverage of stakeholders but rationale for non-functional requirements still thin.",
+        submittedAt: new Date(now.getTime() - 3 * 86400000),
+      },
+    });
+    // Move gap to IN_PROGRESS to reflect progress
+    await prisma.learningGap.update({
+      where: { id: primaryAttemptGap.id },
+      data: { status: "IN_PROGRESS" },
+    });
+  }
+
+  // Recovered gap for one demo student so QA Learning Analytics shows non-zero
+  // RECOVERED count.
+  const recoveredStudent = students[2];
+  const recoveredGap = await prisma.learningGap.create({
+    data: {
+      studentId: recoveredStudent.id,
+      courseId: cSE.id,
+      learningOutcomeId: loSE2.id,
+      sourceAssessmentId: aSE1.id,
+      severity: "AMBER",
+      status: "RECOVERED",
+    },
+  });
+  const recoveredCA = await prisma.correctionActivity.create({
+    data: {
+      learningGapId: recoveredGap.id,
+      title: "System Structure Practice",
+      description: "Redraw the component diagram with labels for interfaces and data flow.",
+      instructions: "Submit an updated component diagram with all interfaces labelled.",
+      maxScore: 100,
+      createdBy: lect.id,
+      dueDate: new Date(now.getTime() - 6 * 86400000),
+    },
+  });
+  await prisma.correctionAttempt.create({
+    data: {
+      correctionActivityId: recoveredCA.id,
+      studentId: recoveredStudent.id,
+      attemptNumber: 1,
+      score: 82,
+      feedback: "All interfaces labelled and data flow direction clear.",
+      submittedAt: new Date(now.getTime() - 5 * 86400000),
+    },
+  });
+
+  // Evaluation TEXT comments across a few courses so QA "themes" chip cloud
+  // and Lecturer Teaching Evaluation Results both show content.
+  const textQs = allQs.filter((q) => q.type === "TEXT");
+  const goodComments = [
+    "The lecturer explained concepts very clearly and used relevant examples.",
+    "I liked the practical demonstrations — they made things easy to understand.",
+    "The lecturer was approachable and answered questions patiently.",
+    "Feedback on the assignment was helpful and specific.",
+    "Course was well organised and the pace was reasonable.",
+  ];
+  const improveComments = [
+    "More real-world examples would help.",
+    "Please release feedback faster; two weeks is too long.",
+    "The slides were sometimes hard to read.",
+    "It would help to have optional tutorial sessions.",
+    "Some topics were rushed towards the end of the semester.",
+    "Please post recordings of the lectures for revision.",
+  ];
+  for (const c of courses) {
+    const cEnrolled = await prisma.enrollment.findMany({ where: { courseId: c.id } });
+    // ratings if none yet
+    for (let i = 0; i < Math.min(cEnrolled.length, 12); i++) {
+      const e = cEnrolled[i];
+      if (e.studentId === primaryStudent.id) continue;
+      for (const q of ratingQs) {
+        const exists = await prisma.evaluationResponse.findFirst({
+          where: { studentId: e.studentId, courseId: c.id, questionId: q.id },
+        });
+        if (exists) continue;
+        await prisma.evaluationResponse.create({
+          data: { studentId: e.studentId, courseId: c.id, questionId: q.id, rating: 3 + Math.floor(Math.random() * 3) },
+        }).catch(() => {});
+      }
+      // free-text comment on ~40% of students
+      if (Math.random() < 0.4 && textQs.length > 0) {
+        const q = textQs[i % textQs.length];
+        const pool = q.text.toLowerCase().includes("worked") ? goodComments : improveComments;
+        await prisma.evaluationResponse.create({
+          data: {
+            studentId: e.studentId,
+            courseId: c.id,
+            questionId: q.id,
+            text: pool[Math.floor(Math.random() * pool.length)],
+          },
+        }).catch(() => {});
+      }
+    }
+  }
+
+  // Ensure primary student has an issue they submitted (so "My Issues" isn't empty).
+  await prisma.issue.create({
+    data: {
+      studentId: primaryStudent.id,
+      title: "Cannot access e-learning materials",
+      description: "The link to the SE301 recorded lecture returns a 404 error.",
+      category: "ICT",
+      issueType: "Connectivity",
+      location: null,
+      priority: "MEDIUM",
+      privacyMode: "IDENTIFIED",
+      departmentId: dICT.id,
+      assignedOfficerId: ictOfficer.id,
+      status: "IN_PROGRESS",
+      aiConfidence: 0.91,
+      createdAt: new Date(now.getTime() - 4 * 86400000),
+      updates: {
+        create: [
+          { message: "Issue submitted.", type: "STATUS_CHANGE", visibleToStudent: true, createdAt: new Date(now.getTime() - 4 * 86400000) },
+          { message: "Received and routed to ICT.", type: "STATUS_CHANGE", visibleToStudent: true, createdAt: new Date(now.getTime() - 3.9 * 86400000) },
+          { message: "Assigned to Ian Kato.", type: "STATUS_CHANGE", visibleToStudent: true, createdAt: new Date(now.getTime() - 3.5 * 86400000) },
+          { message: "We are checking the CDN mapping for the lecture file.", type: "STUDENT_UPDATE", visibleToStudent: true, createdAt: new Date(now.getTime() - 2 * 86400000) },
+        ],
+      },
+    },
+  });
+
+  // Two more institutional actions to broaden Reports / You Said→We Did feed.
+  await prisma.institutionalAction.create({
+    data: {
+      title: "Extended library opening hours during exam period",
+      issueSummary: "Students requested longer study hours.",
+      evidence: "24 comments on evaluation and 6 issues in Student Welfare category.",
+      actionTaken: "Library will open until 11pm during the exam period, staffed by student volunteers.",
+      responsibleDepartmentId: dLIB.id,
+      status: "IN_PROGRESS",
+      published: true,
+    },
+  });
+  await prisma.institutionalAction.create({
+    data: {
+      title: "Timetable clash reporting form introduced",
+      issueSummary: "Timetable clashes went unreported.",
+      evidence: "Registrar office received informal complaints from 3 programmes.",
+      actionTaken: "Registrar introduced a formal clash-reporting form and 48-hour resolution SLA.",
+      responsibleDepartmentId: dREG.id,
+      status: "COMPLETED",
+      outcome: "Clashes for the current semester dropped by 40%.",
+      published: true,
+      completedAt: new Date(now.getTime() - 10 * 86400000),
+    },
+  });
+
+  // Notifications: give lecturers, dept officers and QA a couple each so
+  // notification badges are visible everywhere.
+  await prisma.notification.create({ data: { userId: lect.id, title: "New at-risk student", message: "A student in SE301 needs attention on Requirements Analysis.", type: "AT_RISK" } });
+  await prisma.notification.create({ data: { userId: lect2.id, title: "Evaluation window open", message: "IS210 evaluations are open until end of semester.", type: "EVALUATION" } });
+  await prisma.notification.create({ data: { userId: lect3.id, title: "Marking pending", message: "RM401 Research Proposal submissions arriving.", type: "MARKING" } });
+  await prisma.notification.create({ data: { userId: ictOfficer.id, title: "Escalation notice", message: "A high-priority ICT case has been open for 3 days.", type: "ISSUE" } });
+  await prisma.notification.create({ data: { userId: qa.id, title: "New institutional action published", message: "Library Wi-Fi replacement outcome recorded.", type: "QA_INSIGHT" } });
+  await prisma.notification.create({ data: { userId: admin.id, title: "New evaluation window", message: "Evaluation window is now open institution-wide.", type: "SYSTEM" } });
+
   console.log("✓ Seed complete");
   console.log("");
   console.log("Demo accounts (password: password123):");
