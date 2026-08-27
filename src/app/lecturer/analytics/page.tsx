@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { KPI, ProgressBar } from "@/components/ui";
+import { KPI } from "@/components/ui";
+import { BarChart, Gauge, CHART_COLORS } from "@/components/Charts";
 
 export default async function LecturerAnalytics() {
   const s = await requireRole("LECTURER");
@@ -44,32 +45,44 @@ export default async function LecturerAnalytics() {
         <KPI label="Recovery rate" value={`${recoveryRate.toFixed(0)}%`} tone={recoveryRate > 60 ? "success" : "warning"} />
       </div>
 
-      <div className="card-p">
-        <div className="section-title mb-3">Learning outcomes with most difficulty</div>
-        <div className="space-y-3">
-          {perOutcome.filter((p) => p.struggling > 0).sort((a, b) => b.struggling - a.struggling).slice(0, 8).map((p) => (
-            <div key={`${p.outcome}-${p.course}`}>
-              <div className="flex items-center justify-between text-sm">
-                <span><b>{p.outcome}</b> <span className="text-on-surface-variant">• {p.course}</span></span>
-                <span className="text-on-surface-variant">{p.struggling} of {p.total} students</span>
-              </div>
-              <ProgressBar value={p.total > 0 ? (p.struggling / p.total) * 100 : 0} />
-            </div>
-          ))}
-          {perOutcome.every((p) => p.struggling === 0) && <p className="text-sm text-on-surface-variant">No struggling outcomes detected.</p>}
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="card-p md:col-span-2">
+          <div className="section-title mb-3">Learning outcomes with most difficulty</div>
+          {perOutcome.filter((p) => p.struggling > 0).length > 0 ? (
+            <BarChart
+              orientation="horizontal"
+              data={perOutcome
+                .filter((p) => p.struggling > 0)
+                .sort((a, b) => b.struggling - a.struggling)
+                .slice(0, 8)
+                .map((p) => ({ label: `${p.outcome} • ${p.course}`, value: p.struggling, color: CHART_COLORS.warning }))}
+              valueSuffix=" students"
+            />
+          ) : (
+            <p className="text-sm text-on-surface-variant">No struggling outcomes detected.</p>
+          )}
+        </div>
+        <div className="card-p">
+          <div className="section-title mb-3">Recovery</div>
+          <Gauge value={recoveryRate} label={`${recovered} of ${totalGaps} recovered`} />
         </div>
       </div>
 
       <div className="card-p">
         <div className="section-title mb-3">Assessment averages</div>
-        <table className="table">
-          <thead><tr><th>Assessment</th><th>Marked</th><th>Average</th></tr></thead>
-          <tbody>
-            {avgList.map((a) => (
-              <tr key={a.title}><td>{a.title}</td><td>{a.n}</td><td>{a.avg.toFixed(0)}%</td></tr>
-            ))}
-          </tbody>
-        </table>
+        {avgList.length > 0 ? (
+          <BarChart
+            data={avgList.map((a) => ({
+              label: a.title,
+              value: Math.round(a.avg),
+              color: a.avg >= 70 ? CHART_COLORS.success : a.avg >= 50 ? CHART_COLORS.warning : CHART_COLORS.error,
+            }))}
+            valueSuffix="%"
+            height={240}
+          />
+        ) : (
+          <p className="text-sm text-on-surface-variant">No released assessments yet.</p>
+        )}
       </div>
     </div>
   );

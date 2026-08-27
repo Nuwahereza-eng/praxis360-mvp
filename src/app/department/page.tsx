@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { KPI, Badge } from "@/components/ui";
+import { StackedBar, DonutChart, CHART_COLORS } from "@/components/Charts";
 import Link from "next/link";
 import { fmtDate, statusColor } from "@/lib/utils";
 
@@ -20,6 +21,16 @@ export default async function DepartmentDashboard() {
   ]);
   const recent = await prisma.issue.findMany({ where, include: { student: true }, orderBy: { createdAt: "desc" }, take: 10 });
 
+  const byCategory = await prisma.issue.groupBy({ by: ["category"], where, _count: true });
+  const catData = byCategory.map((c) => ({ label: c.category, value: Number(c._count) }));
+  const pipeline = [
+    { label: "New", value: submitted, color: CHART_COLORS.info },
+    { label: "Assigned", value: assigned, color: CHART_COLORS.secondary },
+    { label: "In progress", value: inProgress, color: CHART_COLORS.tertiary },
+    { label: "Escalated", value: escalated, color: CHART_COLORS.error },
+    { label: "Resolved", value: resolved, color: CHART_COLORS.success },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -33,6 +44,25 @@ export default async function DepartmentDashboard() {
         <KPI label="In progress" value={inProgress} tone="info" />
         <KPI label="Escalated" value={escalated} tone={escalated > 0 ? "error" : "default"} />
         <KPI label="Resolved" value={resolved} tone="success" />
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="card-p md:col-span-2">
+          <div className="section-title mb-3">Case pipeline</div>
+          {total > 0 ? (
+            <StackedBar segments={pipeline} height={26} />
+          ) : (
+            <p className="text-sm text-on-surface-variant">No cases yet.</p>
+          )}
+        </div>
+        <div className="card-p">
+          <div className="section-title mb-3">By category</div>
+          {catData.length > 0 ? (
+            <DonutChart data={catData} centerValue={total} centerLabel="cases" size={170} />
+          ) : (
+            <p className="text-sm text-on-surface-variant">—</p>
+          )}
+        </div>
       </div>
 
       <div className="card-p">

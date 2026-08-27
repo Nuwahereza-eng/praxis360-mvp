@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/ai";
-import { KPI, ProgressBar, InsightCard } from "@/components/ui";
+import { KPI, InsightCard } from "@/components/ui";
+import { DonutChart, StackedBar, Gauge, CHART_COLORS } from "@/components/Charts";
 import Link from "next/link";
 
 export default async function QADashboard() {
@@ -49,6 +50,20 @@ export default async function QADashboard() {
 
   // Category breakdown
   const catRaw = await prisma.issue.groupBy({ by: ["category"], _count: true, orderBy: { _count: { category: "desc" } } });
+  const catData = catRaw.map((c) => ({ label: c.category, value: Number(c._count) }));
+
+  // Status pipeline for stacked bar
+  const statusRaw = await prisma.issue.groupBy({ by: ["status"], _count: true });
+  const statusMap = new Map(statusRaw.map((s) => [s.status, Number(s._count)] as const));
+  const pipeline = [
+    { label: "New", value: statusMap.get("SUBMITTED") || 0, color: CHART_COLORS.info },
+    { label: "Received", value: statusMap.get("RECEIVED") || 0, color: "#0891b2" },
+    { label: "Assigned", value: statusMap.get("ASSIGNED") || 0, color: CHART_COLORS.secondary },
+    { label: "In progress", value: statusMap.get("IN_PROGRESS") || 0, color: CHART_COLORS.tertiary },
+    { label: "Escalated", value: statusMap.get("ESCALATED") || 0, color: CHART_COLORS.error },
+    { label: "Resolved", value: statusMap.get("RESOLVED") || 0, color: CHART_COLORS.success },
+    { label: "Verified", value: statusMap.get("VERIFIED") || 0, color: "#15803d" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -76,17 +91,26 @@ export default async function QADashboard() {
           </div>
         </div>
         <div className="card-p">
-          <div className="section-title mb-3">Issue categories</div>
-          <div className="space-y-3">
-            {catRaw.map((c) => (
-              <div key={c.category}>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{c.category}</span>
-                  <span className="text-on-surface-variant">{c._count}</span>
-                </div>
-                <ProgressBar value={totalIssues > 0 ? (Number(c._count) / totalIssues) * 100 : 0} />
-              </div>
-            ))}
+          <div className="section-title mb-3">Issues by category</div>
+          <DonutChart
+            data={catData}
+            centerValue={totalIssues}
+            centerLabel="issues"
+          />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <div className="card-p md:col-span-2">
+          <div className="section-title mb-3">Issue pipeline</div>
+          <StackedBar segments={pipeline} height={26} />
+        </div>
+        <div className="card-p">
+          <div className="section-title mb-3">Loop-closing performance</div>
+          <div className="grid grid-cols-3 gap-2">
+            <Gauge value={onTimePct} label="On-time feedback" />
+            <Gauge value={responsePct} label="Eval response" />
+            <Gauge value={resolutionPct} label="Resolution" />
           </div>
         </div>
       </div>

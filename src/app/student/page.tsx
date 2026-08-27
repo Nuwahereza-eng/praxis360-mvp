@@ -1,6 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { KPI, Badge, LoopSteps } from "@/components/ui";
+import { LineChart, DonutChart, CHART_COLORS } from "@/components/Charts";
 import { fmtDate, statusColor } from "@/lib/utils";
 import Link from "next/link";
 
@@ -18,6 +19,18 @@ export default async function StudentDashboard() {
     ? results.reduce((sum, r) => sum + r.percentage, 0) / results.length
     : 0;
 
+  // Trend chart: student's scores across their released results (oldest → newest)
+  const trend = [...results].reverse();
+  const trendLabels = trend.map((r) => r.assessment.title);
+  const trendValues = trend.map((r) => Math.round(r.percentage));
+
+  // Personal score distribution
+  const buckets = [
+    { label: "Struggling (<50%)", value: results.filter((r) => r.percentage < 50).length, color: CHART_COLORS.error },
+    { label: "Passing (50–69%)", value: results.filter((r) => r.percentage >= 50 && r.percentage < 70).length, color: CHART_COLORS.warning },
+    { label: "Strong (70%+)", value: results.filter((r) => r.percentage >= 70).length, color: CHART_COLORS.success },
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -34,6 +47,25 @@ export default async function StudentDashboard() {
         <KPI label="Active Learning Gaps" value={gaps} tone={gaps > 0 ? "warning" : "success"} />
         <KPI label="Unread Notifications" value={notifs} />
       </div>
+
+      {results.length > 0 && (
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="card-p md:col-span-2">
+            <div className="section-title mb-3">Your performance trend</div>
+            <LineChart
+              labels={trendLabels}
+              series={[{ name: "Score", values: trendValues, color: CHART_COLORS.primary }]}
+              ySuffix="%"
+              yMax={100}
+              height={220}
+            />
+          </div>
+          <div className="card-p">
+            <div className="section-title mb-3">Score distribution</div>
+            <DonutChart data={buckets} centerValue={`${avg.toFixed(0)}%`} centerLabel="average" size={170} />
+          </div>
+        </div>
+      )}
 
       <div className="card-p">
         <div className="section-title mb-2">Recent Feedback</div>
