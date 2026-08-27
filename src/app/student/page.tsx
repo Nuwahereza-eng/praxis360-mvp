@@ -7,13 +7,36 @@ import Link from "next/link";
 
 export default async function StudentDashboard() {
   const s = await requireRole("STUDENT");
-  const [enrollments, results, gaps, issues, notifs] = await Promise.all([
+  const [enrollments, results, gaps, issues, notifs, semester] = await Promise.all([
     prisma.enrollment.count({ where: { studentId: s.sub } }),
     prisma.assessmentResult.findMany({ where: { studentId: s.sub, status: "RELEASED" }, include: { assessment: { include: { course: true } } }, orderBy: { feedbackReleasedAt: "desc" }, take: 5 }),
     prisma.learningGap.count({ where: { studentId: s.sub, status: { in: ["IDENTIFIED", "IN_PROGRESS"] } } }),
     prisma.issue.findMany({ where: { studentId: s.sub }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.notification.count({ where: { userId: s.sub, read: false } }),
+    prisma.semester.findFirst({ where: { status: "ACTIVE" } }),
   ]);
+
+  const now = new Date();
+  const evalOpen = !!semester && semester.evaluationStartDate <= now && semester.evaluationEndDate >= now;
+  let pendingEvals = 0;
+  let daysLeft = 0;
+  if (evalOpen && semester) {
+    const totalRatingQs = await prisma.evaluationQuestion.count({ where: { type: "RATING" } });
+    const myEnrollments = await prisma.enrollment.findMany({
+      where: { studentId: s.sub, semesterId: semester.id },
+      select: { courseId: true },
+    });
+    const pendingChecks = await Promise.all(
+      myEnrollments.map(async (e): Promise<number> => {
+        const answered = await prisma.evaluationResponse.count({
+          where: { studentId: s.sub, courseId: e.courseId, question: { type: "RATING" } },
+        });
+        return answered < totalRatingQs ? 1 : 0;
+      }),
+    );
+    pendingEvals = pendingChecks.reduce((a, b) => a + b, 0);
+    daysLeft = Math.max(0, Math.ceil((semester.evaluationEndDate.getTime() - now.getTime()) / 86_400_000));
+  }
 
   const avg = results.length > 0
     ? results.reduce((sum, r) => sum + r.percentage, 0) / results.length
@@ -40,6 +63,26 @@ export default async function StudentDashboard() {
         </div>
         <Link href="/student/issues/new" className="btn-primary">Raise an Issue</Link>
       </div>
+
+      {evalOpen && pendingEvals > 0 && (
+        <Link
+          href="/student/evaluations"
+          className="block rounded-2xl p-5 bg-gradient-to-br from-primary via-primary to-secondary text-on-primary shadow-card hover:opacity-95 transition"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs uppercase tracking-widest opacity-90 font-semibold">📣 Evaluations open</div>
+              <div className="text-lg md:text-xl font-bold mt-1">
+                Rate your {pendingEvals} pending course{pendingEvals === 1 ? "" : "s"} — 3 minutes each, fully anonymous
+              </div>
+              <div className="text-xs opacity-90 mt-1">
+                Your ratings drive real changes. Closes in {daysLeft} day{daysLeft === 1 ? "" : "s"}.
+              </div>
+            </div>
+            <span className="btn bg-white text-primary hover:bg-white/90 font-semibold">Start now →</span>
+          </div>
+        </Link>
+      )}
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KPI label="Enrolled Courses" value={enrollments} />

@@ -91,3 +91,14 @@ h1, h2, h3, h4, h5, h6 {
   height: 100%;
   background: linear-gradient(90deg, #002045, #13696a);
 }
+
+/* Evaluation face-scale option */
+.face-option {
+  @apply flex flex-col items-center justify-center border border-outline-variant rounded-xl px-2 py-3 cursor-pointer transition select-none;
+}
+.face-option:has(input:checked) {
+  @apply border-primary bg-primary-container/60 ring-2 ring-primary/40 scale-105;
+}
+.face-option:active {
+  @apply scale-95;
+}

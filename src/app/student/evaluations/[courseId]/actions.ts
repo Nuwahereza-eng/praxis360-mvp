@@ -30,5 +30,5 @@ export async function submitEvaluationAction(formData: FormData) {
   await prisma.notification.create({
     data: { userId: s.sub, title: "Evaluation submitted", message: "Thanks — your feedback has been recorded anonymously.", type: "EVALUATION" },
   });
-  redirect("/student/evaluations");
+  redirect("/student/evaluations?thanks=1");
 }
