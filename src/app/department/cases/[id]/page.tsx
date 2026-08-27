@@ -11,7 +11,13 @@ export default async function CaseDetail({ params }: { params: { id: string } })
   const me = await prisma.user.findUnique({ where: { id: s.sub } });
   const issue = await prisma.issue.findUnique({
     where: { id: params.id },
-    include: { student: true, department: true, assignedOfficer: true, updates: { orderBy: { createdAt: "asc" }, include: { author: true } } },
+    include: {
+      student: true,
+      department: true,
+      assignedOfficer: true,
+      updates: { orderBy: { createdAt: "asc" }, include: { author: true } },
+      actionPoints: { orderBy: [{ status: "asc" }, { orderIdx: "asc" }, { createdAt: "asc" }] },
+    },
   });
   if (!issue || (issue.departmentId && issue.departmentId !== me?.departmentId)) notFound();
 
@@ -63,6 +69,84 @@ export default async function CaseDetail({ params }: { params: { id: string } })
         </div>
       </div>
 
+      {/* Action Points — concrete steps this department commits to. Visible to the student. */}
+      <div className="card-p">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="section-title">Action Points</div>
+            <p className="text-xs text-on-surface-variant">Steps you commit to. The student sees these and their status.</p>
+          </div>
+          <div className="text-xs text-on-surface-variant">
+            {issue.actionPoints.filter((a) => a.status === "DONE").length} / {issue.actionPoints.length} done
+          </div>
+        </div>
+
+        {issue.actionPoints.length === 0 && (
+          <div className="text-sm text-on-surface-variant border border-dashed border-outline-variant rounded-lg p-4 text-center">
+            No action points yet. Add the first step below.
+          </div>
+        )}
+
+        <ol className="space-y-3">
+          {issue.actionPoints.map((ap, idx) => (
+            <li key={ap.id} className="border border-outline-variant rounded-lg p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-on-surface-variant">#{idx + 1}</span>
+                    <div className="font-medium text-sm">{ap.title}</div>
+                    <Badge className={actionStatusColor(ap.status)}>{ap.status.replace("_", " ")}</Badge>
+                  </div>
+                  {ap.detail && <div className="text-xs text-on-surface-variant mt-1 whitespace-pre-line">{ap.detail}</div>}
+                  <div className="text-[10px] text-on-surface-variant mt-1">
+                    Added {fmtDateTime(ap.createdAt)}
+                    {ap.completedAt ? ` • Completed ${fmtDateTime(ap.completedAt)}` : ""}
+                  </div>
+                </div>
+                <form action={officerActionAction} className="flex flex-wrap gap-1 shrink-0">
+                  <input type="hidden" name="issueId" value={issue.id} />
+                  <input type="hidden" name="actionId" value={ap.id} />
+                  <input type="hidden" name="op" value="SET_ACTION_STATUS" />
+                  {["PENDING", "IN_PROGRESS", "DONE", "BLOCKED"]
+                    .filter((s) => s !== ap.status)
+                    .map((s) => (
+                      <button
+                        key={s}
+                        name="actionStatus"
+                        value={s}
+                        className="btn-outline text-[11px] px-2 py-1"
+                        title={`Mark ${s.toLowerCase().replace("_", " ")}`}
+                      >
+                        {s === "IN_PROGRESS" ? "Working" : s === "DONE" ? "Done" : s === "BLOCKED" ? "Blocked" : "Reopen"}
+                      </button>
+                    ))}
+                </form>
+              </div>
+            </li>
+          ))}
+        </ol>
+
+        <form action={officerActionAction} className="mt-4 space-y-2 border-t border-outline-variant pt-4">
+          <input type="hidden" name="issueId" value={issue.id} />
+          <input type="hidden" name="op" value="ADD_ACTION" />
+          <label className="label">Add action point</label>
+          <input
+            name="actionTitle"
+            className="input"
+            placeholder="e.g. Replace faulty Wi-Fi access point"
+            required
+            maxLength={140}
+          />
+          <textarea
+            name="actionDetail"
+            className="input min-h-[60px]"
+            placeholder="Optional detail visible to the student…"
+            maxLength={500}
+          />
+          <button className="btn-primary text-sm">Add action point</button>
+        </form>
+      </div>
+
       <div className="card-p">
         <div className="section-title mb-2">Timeline</div>
         <ol className="space-y-3">
@@ -91,4 +175,17 @@ export default async function CaseDetail({ params }: { params: { id: string } })
       </div>
     </div>
   );
+}
+
+function actionStatusColor(status: string) {
+  switch (status) {
+    case "DONE":
+      return "bg-success-container text-success";
+    case "IN_PROGRESS":
+      return "bg-info-container text-info";
+    case "BLOCKED":
+      return "bg-error-container text-error";
+    default:
+      return "bg-surface-container text-on-surface-variant";
+  }
 }

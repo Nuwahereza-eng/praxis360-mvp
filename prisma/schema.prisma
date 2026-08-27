@@ -247,6 +247,7 @@ model Issue {
   department     Department? @relation(fields: [departmentId], references: [id])
   assignedOfficer User?      @relation("IssueOfficer", fields: [assignedOfficerId], references: [id])
   updates        IssueUpdate[]
+  actionPoints   IssueActionPoint[]
 }
 
 model IssueUpdate {
@@ -260,6 +261,23 @@ model IssueUpdate {
 
   issue  Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
   author User? @relation(fields: [authorId], references: [id])
+}
+
+// A concrete step a department officer commits to for an issue.
+// Visible to the affected student so they can see progress in real time.
+model IssueActionPoint {
+  id          String    @id @default(cuid())
+  issueId     String
+  title       String
+  detail      String?
+  status      String    @default("PENDING") // PENDING | IN_PROGRESS | DONE | BLOCKED
+  createdById String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+  orderIdx    Int       @default(0)
+
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
 }
 
 model EvaluationQuestion {

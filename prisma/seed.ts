@@ -16,6 +16,7 @@ async function main() {
   await prisma.notification.deleteMany();
   await prisma.institutionalAction.deleteMany();
   await prisma.issueUpdate.deleteMany();
+  await prisma.issueActionPoint.deleteMany();
   await prisma.issue.deleteMany();
   await prisma.correctionAttempt.deleteMany();
   await prisma.correctionActivity.deleteMany();
@@ -581,7 +582,7 @@ async function main() {
   }
 
   // Ensure primary student has an issue they submitted (so "My Issues" isn't empty).
-  await prisma.issue.create({
+  const primaryStudentIssue = await prisma.issue.create({
     data: {
       studentId: primaryStudent.id,
       title: "Cannot access e-learning materials",
@@ -606,6 +607,65 @@ async function main() {
       },
     },
   });
+
+  // Action points on Ada's ICT issue — one DONE, one IN_PROGRESS, one PENDING.
+  await prisma.issueActionPoint.createMany({
+    data: [
+      {
+        issueId: primaryStudentIssue.id,
+        title: "Verify the broken link and reproduce the 404",
+        detail: "Confirm the lecture URL returns 404 from a student account.",
+        status: "DONE",
+        createdById: ictOfficer.id,
+        orderIdx: 0,
+        completedAt: new Date(now.getTime() - 3 * 86400000),
+        createdAt: new Date(now.getTime() - 3.4 * 86400000),
+      },
+      {
+        issueId: primaryStudentIssue.id,
+        title: "Restore the CDN mapping for SE301 lectures",
+        detail: "Update the CDN alias so the recording endpoint resolves correctly.",
+        status: "IN_PROGRESS",
+        createdById: ictOfficer.id,
+        orderIdx: 1,
+        createdAt: new Date(now.getTime() - 3 * 86400000),
+      },
+      {
+        issueId: primaryStudentIssue.id,
+        title: "Notify the student and lecturer once restored",
+        detail: "Post a status update and mark the case resolved for verification.",
+        status: "PENDING",
+        createdById: ictOfficer.id,
+        orderIdx: 2,
+        createdAt: new Date(now.getTime() - 3 * 86400000),
+      },
+    ],
+  });
+
+  // A couple of action points on the Library Wi-Fi issue for the officer view demo.
+  const libWifi = await prisma.issue.findFirst({ where: { title: "Library Wi-Fi unreliable" } });
+  if (libWifi) {
+    await prisma.issueActionPoint.createMany({
+      data: [
+        {
+          issueId: libWifi.id,
+          title: "Run diagnostics on library access point",
+          status: "DONE",
+          createdById: ictOfficer.id,
+          orderIdx: 0,
+          completedAt: new Date(now.getTime() - 1 * 86400000),
+        },
+        {
+          issueId: libWifi.id,
+          title: "Order replacement access point",
+          detail: "AP identified as faulty; procurement request submitted.",
+          status: "IN_PROGRESS",
+          createdById: ictOfficer.id,
+          orderIdx: 1,
+        },
+      ],
+    });
+  }
 
   // Two more institutional actions to broaden Reports / You Said→We Did feed.
   await prisma.institutionalAction.create({
