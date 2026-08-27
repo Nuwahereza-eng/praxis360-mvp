@@ -1,0 +1,25 @@
+# Render Blueprint for Praxis360
+# One-click deploy: connect this repo at https://dashboard.render.com/blueprints
+services:
+  - type: web
+    name: praxis360
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: .
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:prod
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.1
+      - key: DATABASE_URL
+        value: file:./prisma/dev.db
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: ""
+      - key: AI_API_KEY
+        value: ""
