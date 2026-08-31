@@ -88,8 +88,8 @@ export async function AppShell({
     .toUpperCase();
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-[248px_1fr] bg-surface">
-      <aside className="hidden md:flex flex-col bg-primary text-on-primary">
+    <div className="h-screen grid grid-cols-1 md:grid-cols-[248px_1fr] bg-surface overflow-hidden">
+      <aside className="hidden md:flex flex-col bg-primary text-on-primary h-screen sticky top-0">
         <div className="px-5 py-5 border-b border-white/10">
           <Link href="/" className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-on-primary text-primary grid place-items-center font-bold text-lg tracking-tight">P</div>
@@ -133,8 +133,8 @@ export async function AppShell({
         </div>
       </aside>
 
-      <div className="flex flex-col min-h-screen min-w-0">
-        <header className="border-b border-outline-variant bg-surface-container-lowest">
+      <div className="flex flex-col h-screen min-w-0 overflow-hidden">
+        <header className="border-b border-outline-variant bg-surface-container-lowest shrink-0">
           <div className="flex items-center justify-between gap-3 px-4 md:px-6 py-3">
             <div className="min-w-0">
               <div className="text-[10px] md:text-xs uppercase tracking-wide text-on-surface-variant font-semibold">{ROLE_LABEL[role]}</div>
@@ -177,7 +177,9 @@ export async function AppShell({
             })}
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto min-w-0">{children}</main>
+        <main className="flex-1 overflow-y-auto min-w-0">
+          <div className="p-4 md:p-8 max-w-7xl w-full mx-auto">{children}</div>
+        </main>
       </div>
     </div>
   );
