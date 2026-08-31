@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { notifyUser } from "@/lib/notify";
 
 export async function officerActionAction(formData: FormData) {
   const s = await requireRole("DEPARTMENT_OFFICER");
@@ -15,8 +16,15 @@ export async function officerActionAction(formData: FormData) {
 
   const notifyStudent = async (title: string, message: string) => {
     if (issue.studentId) {
-      await prisma.notification.create({
-        data: { userId: issue.studentId, title, message, type: "ISSUE", relatedEntityType: "ISSUE", relatedEntityId: issueId },
+      await notifyUser({
+        userId: issue.studentId,
+        title,
+        message,
+        type: "ISSUE",
+        relatedEntityType: "ISSUE",
+        relatedEntityId: issueId,
+        actionUrl: `${process.env.APP_URL ?? ""}/student/issues/${issueId}`,
+        actionLabel: "View issue",
       });
     }
   };
@@ -166,16 +174,20 @@ export async function officerActionAction(formData: FormData) {
       select: { id: true },
     });
     if (receivingOfficers.length > 0) {
-      await prisma.notification.createMany({
-        data: receivingOfficers.map((o) => ({
-          userId: o.id,
-          title: "Case forwarded to your department",
-          message: `“${issue.title}” was forwarded from ${fromDept?.name ?? "another department"}.`,
-          type: "ISSUE",
-          relatedEntityType: "ISSUE",
-          relatedEntityId: issueId,
-        })),
-      });
+      await Promise.all(
+        receivingOfficers.map((o) =>
+          notifyUser({
+            userId: o.id,
+            title: "Case forwarded to your department",
+            message: `"${issue.title}" was forwarded from ${fromDept?.name ?? "another department"}.`,
+            type: "ISSUE",
+            relatedEntityType: "ISSUE",
+            relatedEntityId: issueId,
+            actionUrl: `${process.env.APP_URL ?? ""}/department/cases/${issueId}`,
+            actionLabel: "Open case",
+          }),
+        ),
+      );
     }
 
     await notifyStudent(

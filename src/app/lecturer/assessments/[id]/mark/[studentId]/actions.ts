@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { AIService } from "@/lib/ai";
 import { revalidatePath } from "next/cache";
+import { notifyUser } from "@/lib/notify";
 
 export async function analyzeFeedbackAction(feedback: string) {
   return AIService.analyzeFeedback(feedback);
@@ -84,8 +85,15 @@ export async function saveMarkingAction(formData: FormData) {
         }
       }
     }
-    await prisma.notification.create({
-      data: { userId: studentId, title: "Feedback available", message: `Feedback for ${a.title} has been released.`, type: "FEEDBACK", relatedEntityType: "ASSESSMENT_RESULT", relatedEntityId: resultId },
+    await notifyUser({
+      userId: studentId,
+      title: "Feedback available",
+      message: `Feedback for ${a.title} has been released.`,
+      type: "FEEDBACK",
+      relatedEntityType: "ASSESSMENT_RESULT",
+      relatedEntityId: resultId,
+      actionUrl: `${process.env.APP_URL ?? ""}/student/feedback/${resultId}`,
+      actionLabel: "View feedback",
     });
   }
 

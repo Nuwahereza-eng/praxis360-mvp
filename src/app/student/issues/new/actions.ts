@@ -6,6 +6,7 @@ import { AIService } from "@/lib/ai";
 import { PrivacyMode } from "@/lib/enums";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { notifyUser } from "@/lib/notify";
 
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_BYTES = 2 * 1024 * 1024; // 2 MB per file
@@ -154,15 +155,15 @@ export async function submitIssueAction(formData: FormData) {
   }
 
   if (officer) {
-    await prisma.notification.create({
-      data: {
-        userId: officer.id,
-        title: "New issue assigned",
-        message: `${title} — priority ${priority}${stored > 0 ? ` (${stored} attachment${stored === 1 ? "" : "s"})` : ""}`,
-        type: "ISSUE",
-        relatedEntityType: "ISSUE",
-        relatedEntityId: issue.id,
-      },
+    await notifyUser({
+      userId: officer.id,
+      title: "New issue assigned",
+      message: `${title} — priority ${priority}${stored > 0 ? ` (${stored} attachment${stored === 1 ? "" : "s"})` : ""}`,
+      type: "ISSUE",
+      relatedEntityType: "ISSUE",
+      relatedEntityId: issue.id,
+      actionUrl: `${process.env.APP_URL ?? ""}/department/cases/${issue.id}`,
+      actionLabel: "Open case",
     });
   }
 

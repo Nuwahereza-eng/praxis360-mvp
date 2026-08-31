@@ -397,3 +397,47 @@ model RubricTemplateCriterion {
 
   template RubricTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
 }
+
+model SystemSettings {
+  id                    String   @id @default("singleton")
+  // Branding
+  institutionName       String   @default("Praxis360 Institute")
+  primaryContactEmail   String?
+  // Email
+  emailEnabled          Boolean  @default(false)
+  smtpHost              String?
+  smtpPort              Int?
+  smtpSecure            Boolean  @default(false)
+  smtpUser              String?
+  smtpPass              String?
+  emailFromName         String   @default("Praxis360")
+  emailFromAddress      String?
+  // SLA hours by priority
+  slaCriticalHours      Int      @default(24)
+  slaHighHours          Int      @default(48)
+  slaMediumHours        Int      @default(120)
+  slaLowHours           Int      @default(240)
+  slaWarnPercent        Int      @default(75)  // remind when % consumed reaches this
+  // Reminders
+  reminderSlaEnabled            Boolean @default(true)
+  reminderEvaluationEnabled     Boolean @default(true)
+  reminderEvaluationDaysBefore  Int     @default(3)
+  reminderCooldownHours         Int     @default(24)
+  // Features
+  aiEnabled                Boolean @default(true)
+  communityBoardEnabled    Boolean @default(true)
+  voiceEnabled             Boolean @default(true)
+  duplicateDetectionEnabled Boolean @default(true)
+  updatedAt DateTime @updatedAt
+}
+
+model ReminderLog {
+  id           String   @id @default(cuid())
+  kind         String   // SLA_WARN | SLA_BREACH | EVAL_DEADLINE
+  entityType   String   // ISSUE | COURSE_EVAL
+  entityId     String
+  userId       String
+  sentAt       DateTime @default(now())
+
+  @@index([kind, entityId, userId])
+}

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { notifyUser } from "@/lib/notify";
 
 export async function submitCorrectionAction(formData: FormData) {
   const s = await requireRole("STUDENT");
@@ -39,17 +40,17 @@ export async function submitCorrectionAction(formData: FormData) {
     data: { status: score >= 60 ? "RECOVERED" : "IN_PROGRESS" },
   });
 
-  await prisma.notification.create({
-    data: {
-      userId: s.sub,
-      title: score >= 60 ? "Learning gap recovered" : "Correction submitted",
-      message: score >= 60
-        ? `Great work — your reassessment scored ${score}%.`
-        : `Your correction scored ${score}%. Keep going.`,
-      type: "LEARNING_GAP",
-      relatedEntityType: "LEARNING_GAP",
-      relatedEntityId: gapId,
-    },
+  await notifyUser({
+    userId: s.sub,
+    title: score >= 60 ? "Learning gap recovered" : "Correction submitted",
+    message: score >= 60
+      ? `Great work — your reassessment scored ${score}%.`
+      : `Your correction scored ${score}%. Keep going.`,
+    type: "LEARNING_GAP",
+    relatedEntityType: "LEARNING_GAP",
+    relatedEntityId: gapId,
+    actionUrl: `${process.env.APP_URL ?? ""}/student/recovery`,
+    actionLabel: "Open Learning Recovery",
   });
 
   revalidatePath("/student/recovery");

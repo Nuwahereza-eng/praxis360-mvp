@@ -56,6 +56,7 @@ const NAV: Record<Role, NavItem[]> = {
     { label: "Academic Calendar", href: "/admin/calendar", icon: Icon.Calendar },
     { label: "Evaluation Questions", href: "/admin/questions", icon: Icon.Questions },
     { label: "Routing Rules", href: "/admin/routing", icon: Icon.Routing },
+    { label: "System Settings", href: "/admin/settings", icon: Icon.Actions },
   ],
 };
 

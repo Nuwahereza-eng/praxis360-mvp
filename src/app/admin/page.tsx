@@ -36,6 +36,7 @@ export default async function AdminDashboard() {
           ["Academic Calendar", "/admin/calendar"],
           ["Evaluation Questions", "/admin/questions"],
           ["Routing Rules", "/admin/routing"],
+          ["System Settings", "/admin/settings"],
         ].map(([label, href]) => (
           <Link key={href} href={href} className="card-p hover:shadow-md">
             <div className="font-semibold">{label}</div>

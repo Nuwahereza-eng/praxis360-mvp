@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { notifyUser } from "@/lib/notify";
 
 export async function verifyIssueAction(formData: FormData) {
   const s = await requireRole("STUDENT");
@@ -26,8 +27,15 @@ export async function verifyIssueAction(formData: FormData) {
       data: { issueId, authorId: s.sub, message: "Student reopened the issue.", type: "STATUS_CHANGE", visibleToStudent: true },
     });
     if (issue.assignedOfficerId) {
-      await prisma.notification.create({
-        data: { userId: issue.assignedOfficerId, title: "Issue reopened", message: issue.title, type: "ISSUE", relatedEntityType: "ISSUE", relatedEntityId: issueId },
+      await notifyUser({
+        userId: issue.assignedOfficerId,
+        title: "Issue reopened",
+        message: issue.title,
+        type: "ISSUE",
+        relatedEntityType: "ISSUE",
+        relatedEntityId: issueId,
+        actionUrl: `${process.env.APP_URL ?? ""}/department/cases/${issueId}`,
+        actionLabel: "Open case",
       });
     }
   }

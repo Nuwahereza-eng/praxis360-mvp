@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { getEvaluationFormForCourse } from "@/lib/evaluationForm";
+import { notifyUser } from "@/lib/notify";
 
 export async function submitEvaluationAction(formData: FormData) {
   const s = await requireRole("STUDENT");
@@ -28,8 +29,13 @@ export async function submitEvaluationAction(formData: FormData) {
       // unique violation — already submitted; ignore
     }
   }
-  await prisma.notification.create({
-    data: { userId: s.sub, title: "Evaluation submitted", message: "Thanks — your feedback has been recorded anonymously.", type: "EVALUATION" },
+  await notifyUser({
+    userId: s.sub,
+    title: "Evaluation submitted",
+    message: "Thanks — your feedback has been recorded anonymously.",
+    type: "EVALUATION",
+    actionUrl: `${process.env.APP_URL ?? ""}/student/evaluations`,
+    actionLabel: "See other evaluations",
   });
   redirect("/student/evaluations?thanks=1");
 }
