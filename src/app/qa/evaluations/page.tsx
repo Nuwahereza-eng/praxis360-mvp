@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/ai";
-import { KPI } from "@/components/ui";
+import { KPI, SectionHeader } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import Link from "next/link";
 
 export default async function QAEvaluations() {
@@ -27,15 +28,18 @@ export default async function QAEvaluations() {
           <h1 className="text-2xl font-bold">Teaching Evaluation</h1>
           <p className="text-on-surface-variant text-sm">Aggregated results • Manage the questions students see per course.</p>
         </div>
-        <Link href="/qa/evaluations/form" className="btn-primary">✏️ Edit evaluation forms</Link>
+        <Link href="/qa/evaluations/form" className="btn-primary inline-flex items-center gap-1.5">
+          <Icon.Edit className="w-4 h-4" strokeWidth={2} />
+          Edit evaluation forms
+        </Link>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <KPI label="Overall response rate" value={`${overall.toFixed(0)}%`} tone={overall > 60 ? "success" : "warning"} />
-        <KPI label="Courses" value={rows.length} />
-        <KPI label="Written comments" value={allComments.length} />
+        <KPI label="Overall response rate" value={`${overall.toFixed(0)}%`} tone={overall > 60 ? "success" : "warning"} icon={Icon.Trend} />
+        <KPI label="Courses" value={rows.length} icon={Icon.Courses} />
+        <KPI label="Written comments" value={allComments.length} icon={Icon.Chat} />
       </div>
       <div className="card-p">
-        <div className="section-title mb-3">By course</div>
+        <SectionHeader title="By course" icon={Icon.Analytics} />
         <table className="table">
           <thead><tr><th>Course</th><th>Enrolled</th><th>Response %</th><th>Avg rating (of 5)</th><th>Form</th><th className="text-right">Edit</th></tr></thead>
           <tbody>

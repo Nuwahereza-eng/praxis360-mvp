@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import {
   addEvaluationQuestion,
   updateEvaluationQuestion,
@@ -47,8 +48,18 @@ export default async function QAEvaluationFormEditor({ params }: { params: { sco
     <div className="max-w-3xl mx-auto space-y-6 pb-24">
       {/* Header */}
       <div className="rounded-2xl p-6 bg-gradient-to-br from-primary via-primary to-secondary text-on-primary shadow-card">
-        <div className="text-xs uppercase tracking-widest opacity-90 font-semibold">
-          {isGlobal ? "🌐 Global template" : "🎯 Course-specific form"}
+        <div className="inline-flex items-center gap-2 text-xs uppercase tracking-widest opacity-90 font-semibold">
+          {isGlobal ? (
+            <>
+              <Icon.Templates className="w-3.5 h-3.5" strokeWidth={2} />
+              Global template
+            </>
+          ) : (
+            <>
+              <Icon.Target className="w-3.5 h-3.5" strokeWidth={2} />
+              Course-specific form
+            </>
+          )}
         </div>
         <h1 className="text-2xl md:text-3xl font-bold mt-1">
           {isGlobal ? "Default evaluation form" : (course as any)?.name}
@@ -96,18 +107,24 @@ export default async function QAEvaluationFormEditor({ params }: { params: { sco
 
       {!isGlobal && !usesGlobal && responsesForThisScope > 0 && (
         <div className="card-p border-warning/40 bg-warning-container/60">
-          <div className="text-sm">
-            ⚠️ This form already has <strong>{responsesForThisScope}</strong> student response
-            {responsesForThisScope === 1 ? "" : "s"}. Deleting or changing question meaning may distort the data.
+          <div className="text-sm inline-flex items-center gap-2">
+            <Icon.AtRisk className="w-4 h-4 text-warning shrink-0" strokeWidth={2} />
+            <span>
+              This form already has <strong>{responsesForThisScope}</strong> student response
+              {responsesForThisScope === 1 ? "" : "s"}. Deleting or changing question meaning may distort the data.
+            </span>
           </div>
         </div>
       )}
 
       {!isGlobal && usesGlobal && (
         <div className="card-p border-info/30 bg-info-container/40">
-          <div className="text-sm">
-            🌐 This course currently uses the <strong>global template</strong>. Add a question below or clone from
-            global to start customising.
+          <div className="text-sm inline-flex items-center gap-2">
+            <Icon.Templates className="w-4 h-4 text-info shrink-0" strokeWidth={2} />
+            <span>
+              This course currently uses the <strong>global template</strong>. Add a question below or clone from
+              global to start customising.
+            </span>
           </div>
         </div>
       )}
@@ -156,7 +173,14 @@ export default async function QAEvaluationFormEditor({ params }: { params: { sco
                               : "bg-surface-container text-on-surface-variant"
                           }
                         >
-                          {q.type === "RATING" ? "😐 1–5 scale" : "💬 Free text"}
+                          <span className="inline-flex items-center gap-1">
+                            {q.type === "RATING" ? (
+                              <Icon.Star className="w-3 h-3" strokeWidth={2} />
+                            ) : (
+                              <Icon.Chat className="w-3 h-3" strokeWidth={2} />
+                            )}
+                            {q.type === "RATING" ? "1–5 scale" : "Free text"}
+                          </span>
                         </Badge>
                       </div>
                     </div>

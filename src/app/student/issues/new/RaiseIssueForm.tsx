@@ -2,6 +2,7 @@
 
 import { useState, useTransition, useRef } from "react";
 import { ISSUE_CATEGORIES, PrivacyMode } from "@/lib/enums";
+import { Icon } from "@/components/icons";
 import {
   classifyPreviewAction,
   submitIssueAction,
@@ -149,10 +150,18 @@ export function RaiseIssueForm() {
         {(similar.length > 0 || checking) && (
           <div className="border border-warning/40 bg-warning-container/60 rounded-lg p-3">
             <div className="flex items-center justify-between">
-              <div className="text-sm font-semibold">
-                {checking
-                  ? "🔎 Checking for similar issues…"
-                  : `⚠️ ${similar.length} similar issue${similar.length === 1 ? "" : "s"} already raised`}
+              <div className="text-sm font-semibold inline-flex items-center gap-2">
+                {checking ? (
+                  <>
+                    <Icon.Search className="w-4 h-4" strokeWidth={2} />
+                    Checking for similar issues…
+                  </>
+                ) : (
+                  <>
+                    <Icon.AtRisk className="w-4 h-4 text-warning" strokeWidth={2} />
+                    {similar.length} similar issue{similar.length === 1 ? "" : "s"} already raised
+                  </>
+                )}
               </div>
               {!checking && (
                 <button
@@ -185,14 +194,18 @@ export function RaiseIssueForm() {
                     {si.category} • {si.departmentName} • {si.status}
                   </div>
                   <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-on-surface-variant">▲ {si.upvotes} upvotes</span>
+                    <span className="text-xs text-on-surface-variant inline-flex items-center gap-1">
+                      <Icon.ArrowUp className="w-3 h-3" strokeWidth={2} />
+                      {si.upvotes} upvotes
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleUpvote(si.id)}
                       disabled={upvoting}
-                      className="btn-outline text-xs py-1"
+                      className="btn-outline text-xs py-1 inline-flex items-center gap-1"
                     >
-                      ▲ Upvote instead
+                      <Icon.ArrowUp className="w-3 h-3" strokeWidth={2} />
+                      Upvote instead
                     </button>
                   </div>
                 </li>
@@ -230,8 +243,9 @@ export function RaiseIssueForm() {
           {files.length > 0 && (
             <ul className="mt-2 flex flex-wrap gap-1 text-xs">
               {files.map((f) => (
-                <li key={f.name} className="badge bg-surface-container text-on-surface-variant">
-                  📎 {f.name} · {(f.size / 1024).toFixed(0)} KB
+                <li key={f.name} className="badge bg-surface-container text-on-surface-variant inline-flex items-center gap-1">
+                  <Icon.Paperclip className="w-3 h-3" strokeWidth={2} />
+                  {f.name} · {(f.size / 1024).toFixed(0)} KB
                 </li>
               ))}
             </ul>
@@ -274,10 +288,12 @@ export function RaiseIssueForm() {
         </label>
 
         <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={preview} className="btn-outline" disabled={pending || !title || !description}>
+          <button type="button" onClick={preview} className="btn-outline inline-flex items-center gap-1.5" disabled={pending || !title || !description}>
+            <Icon.Ai className="w-4 h-4" strokeWidth={2} />
             {pending ? "Analysing…" : "AI: classify my issue"}
           </button>
-          <button type="submit" className="btn-primary" disabled={submitting || !title || !description}>
+          <button type="submit" className="btn-primary inline-flex items-center gap-1.5" disabled={submitting || !title || !description}>
+            <Icon.Send className="w-4 h-4" strokeWidth={2} />
             {submitting ? "Submitting…" : "Submit issue"}
           </button>
         </div>
@@ -285,7 +301,10 @@ export function RaiseIssueForm() {
 
       <div className="card-p bg-info-container/40 border-info/30">
         <div className="flex items-center justify-between">
-          <div className="section-title">AI Classification Preview</div>
+          <div className="section-title inline-flex items-center gap-2">
+            <Icon.Ai className="w-4 h-4 text-info" strokeWidth={2} />
+            AI Classification Preview
+          </div>
           <span className="text-[10px] uppercase tracking-wide text-on-surface-variant">AI-generated — review required</span>
         </div>
         {!classification ? (

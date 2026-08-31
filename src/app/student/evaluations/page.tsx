@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Badge, ProgressBar } from "@/components/ui";
+import { Icon } from "@/components/icons";
 import { fmtDate } from "@/lib/utils";
 import { countRatingQuestionsForCourse } from "@/lib/evaluationForm";
 
@@ -59,12 +60,22 @@ export default async function StudentEvaluations({
                 : "Teaching evaluations are not currently open. Check back next semester."}
             </p>
             <div className="flex flex-wrap items-center gap-2 mt-4 text-xs">
-              <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">🔒 Anonymous</span>
-              <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">⏱ ~3 minutes each</span>
-              <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">📢 Directly influences teaching</span>
+              <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+                <Icon.Shield className="w-3.5 h-3.5" strokeWidth={2} />
+                Anonymous
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+                <Icon.Clock className="w-3.5 h-3.5" strokeWidth={2} />
+                ~3 minutes each
+              </span>
+              <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+                <Icon.Trend className="w-3.5 h-3.5" strokeWidth={2} />
+                Directly influences teaching
+              </span>
               {evalOpen && (
-                <span className="inline-flex items-center gap-1 bg-white/25 px-2.5 py-1 rounded-full font-semibold">
-                  ⏳ {daysLeft} day{daysLeft === 1 ? "" : "s"} left
+                <span className="inline-flex items-center gap-1.5 bg-white/25 px-2.5 py-1 rounded-full font-semibold">
+                  <Icon.Clock className="w-3.5 h-3.5" strokeWidth={2} />
+                  {daysLeft} day{daysLeft === 1 ? "" : "s"} left
                 </span>
               )}
             </div>
@@ -84,22 +95,32 @@ export default async function StudentEvaluations({
 
       {showThanks && (
         <div className="card-p bg-success-container border-success/30 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="font-semibold text-success">🎉 Thanks — your feedback is in!</div>
-            <div className="text-sm text-on-surface-variant">
-              {pendingCourses > 0
-                ? `${pendingCourses} course${pendingCourses === 1 ? "" : "s"} still to go. You're shaping how you're taught next term.`
-                : "All done — you evaluated every course. Watch the You Said → We Did board for changes."}
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-lg bg-success text-on-success grid place-items-center shrink-0">
+              <Icon.Check className="w-4 h-4" strokeWidth={2.5} />
+            </div>
+            <div>
+              <div className="font-semibold text-success">Thanks — your feedback is in</div>
+              <div className="text-sm text-on-surface-variant">
+                {pendingCourses > 0
+                  ? `${pendingCourses} course${pendingCourses === 1 ? "" : "s"} still to go. You're shaping how you're taught next term.`
+                  : "All done — you evaluated every course. Watch the You Said, We Did board for changes."}
+              </div>
             </div>
           </div>
-          <Link href="/student/you-said" className="btn-outline text-sm">See You Said → We Did</Link>
+          <Link href="/student/you-said" className="btn-outline text-sm inline-flex items-center gap-1.5">
+            <Icon.YouSaid className="w-4 h-4" strokeWidth={2} />
+            See You Said, We Did
+          </Link>
         </div>
       )}
 
-      {/* Transparency: You Said → We Did teaser */}
+      {/* Transparency: You Said, We Did teaser */}
       <div className="card-p flex flex-wrap items-center justify-between gap-3 border-primary/30 bg-primary-container/40">
         <div className="flex items-start gap-3">
-          <div className="text-2xl">💬</div>
+          <div className="w-10 h-10 rounded-lg bg-primary text-on-primary grid place-items-center shrink-0">
+            <Icon.Chat className="w-5 h-5" strokeWidth={2} />
+          </div>
           <div>
             <div className="font-semibold">Last semester students said…</div>
             <div className="text-sm text-on-surface-variant">
@@ -134,7 +155,10 @@ export default async function StudentEvaluations({
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="font-semibold text-lg">{enrollment.course.name}</div>
                   <Badge className={done ? "bg-success-container text-success" : "bg-warning-container text-warning"}>
-                    {done ? "✓ Submitted" : "Pending"}
+                    <span className="inline-flex items-center gap-1">
+                      {done && <Icon.Check className="w-3 h-3" strokeWidth={2.5} />}
+                      {done ? "Submitted" : "Pending"}
+                    </span>
                   </Badge>
                 </div>
                 <div className="text-xs text-on-surface-variant mt-1">
@@ -144,9 +168,10 @@ export default async function StudentEvaluations({
               {!done && (
                 <Link
                   href={`/student/evaluations/${enrollment.courseId}`}
-                  className="btn-primary shrink-0"
+                  className="btn-primary shrink-0 inline-flex items-center gap-1.5"
                 >
-                  Start (3 min) →
+                  Start (3 min)
+                  <Icon.ArrowRight className="w-4 h-4" strokeWidth={2} />
                 </Link>
               )}
             </div>
@@ -161,8 +186,9 @@ export default async function StudentEvaluations({
               </div>
               <ProgressBar value={participationPct} />
               {behindClass && (
-                <div className="text-xs text-warning mt-2">
-                  🔥 Your classmates are already voting — don&apos;t let them speak for you.
+                <div className="text-xs text-warning mt-2 inline-flex items-center gap-1.5">
+                  <Icon.Flame className="w-3.5 h-3.5" strokeWidth={2} />
+                  Your classmates are already voting — don&apos;t let them speak for you.
                 </div>
               )}
               {done && (

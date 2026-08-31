@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { KPI, Badge } from "@/components/ui";
+import { KPI, Badge, SectionHeader } from "@/components/ui";
 import { BarChart, DonutChart, CHART_COLORS } from "@/components/Charts";
+import { Icon } from "@/components/icons";
 import { fmtDate, statusColor } from "@/lib/utils";
 import Link from "next/link";
 
@@ -58,17 +59,17 @@ export default async function LecturerDashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPI label="Pending marking" value={pendingMarking} />
-        <KPI label="Below pass mark" value={belowPass} tone={belowPass > 0 ? "warning" : "success"} />
-        <KPI label="Active learning gaps" value={gaps} tone={gaps > 0 ? "warning" : "success"} />
-        <KPI label="Corrections submitted" value={corrections} tone="info" />
-        <KPI label="Class average" value={`${avg.toFixed(0)}%`} />
-        <KPI label="Courses" value={courses.length} />
+        <KPI label="Pending marking" value={pendingMarking} icon={Icon.MarkAssessment} />
+        <KPI label="Below pass mark" value={belowPass} tone={belowPass > 0 ? "warning" : "success"} icon={Icon.AtRisk} />
+        <KPI label="Active learning gaps" value={gaps} tone={gaps > 0 ? "warning" : "success"} icon={Icon.Recovery} />
+        <KPI label="Corrections submitted" value={corrections} tone="info" icon={Icon.Check} />
+        <KPI label="Class average" value={`${avg.toFixed(0)}%`} icon={Icon.Trend} />
+        <KPI label="Courses" value={courses.length} icon={Icon.Courses} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card-p">
-          <div className="section-title mb-3">Average per assessment</div>
+          <SectionHeader title="Average per assessment" icon={Icon.Analytics} />
           {avgChart.length > 0 ? (
             <BarChart data={avgChart} valueSuffix="%" height={240} />
           ) : (
@@ -76,7 +77,7 @@ export default async function LecturerDashboard() {
           )}
         </div>
         <div className="card-p">
-          <div className="section-title mb-3">Score distribution</div>
+          <SectionHeader title="Score distribution" icon={Icon.Analytics} />
           {releasedResults.length > 0 ? (
             <DonutChart data={buckets} centerValue={releasedResults.length} centerLabel="results" />
           ) : (
@@ -86,7 +87,7 @@ export default async function LecturerDashboard() {
       </div>
 
       <div className="card-p">
-        <div className="section-title mb-3">Assessments</div>
+        <SectionHeader title="Assessments" icon={Icon.MarkAssessment} />
         <table className="table">
           <thead><tr><th>Assessment</th><th>Course</th><th>Submissions</th><th>Marked</th><th>Average</th><th>Feedback</th><th></th></tr></thead>
           <tbody>

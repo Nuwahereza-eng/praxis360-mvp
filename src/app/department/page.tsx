@@ -1,7 +1,8 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { KPI, Badge } from "@/components/ui";
+import { KPI, Badge, SectionHeader } from "@/components/ui";
 import { StackedBar, DonutChart, CHART_COLORS } from "@/components/Charts";
+import { Icon } from "@/components/icons";
 import Link from "next/link";
 import { fmtDate, statusColor } from "@/lib/utils";
 
@@ -38,17 +39,17 @@ export default async function DepartmentDashboard() {
         <p className="text-on-surface-variant text-sm">Route → Act → Communicate → Verify</p>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-        <KPI label="Total" value={total} />
-        <KPI label="New" value={submitted} tone={submitted > 0 ? "warning" : "default"} />
-        <KPI label="Assigned" value={assigned} tone="info" />
-        <KPI label="In progress" value={inProgress} tone="info" />
-        <KPI label="Escalated" value={escalated} tone={escalated > 0 ? "error" : "default"} />
-        <KPI label="Resolved" value={resolved} tone="success" />
+        <KPI label="Total" value={total} icon={Icon.Cases} />
+        <KPI label="New" value={submitted} tone={submitted > 0 ? "warning" : "default"} icon={Icon.New} />
+        <KPI label="Assigned" value={assigned} tone="info" icon={Icon.Inbox} />
+        <KPI label="In progress" value={inProgress} tone="info" icon={Icon.InProgress} />
+        <KPI label="Escalated" value={escalated} tone={escalated > 0 ? "error" : "default"} icon={Icon.AtRisk} />
+        <KPI label="Resolved" value={resolved} tone="success" icon={Icon.Resolved} />
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card-p md:col-span-2">
-          <div className="section-title mb-3">Case pipeline</div>
+          <SectionHeader title="Case pipeline" icon={Icon.Trend} />
           {total > 0 ? (
             <StackedBar segments={pipeline} height={26} />
           ) : (
@@ -56,7 +57,7 @@ export default async function DepartmentDashboard() {
           )}
         </div>
         <div className="card-p">
-          <div className="section-title mb-3">By category</div>
+          <SectionHeader title="By category" icon={Icon.Analytics} />
           {catData.length > 0 ? (
             <DonutChart data={catData} centerValue={total} centerLabel="cases" size={170} />
           ) : (
@@ -66,7 +67,7 @@ export default async function DepartmentDashboard() {
       </div>
 
       <div className="card-p">
-        <div className="section-title mb-3">Recent Cases</div>
+        <SectionHeader title="Recent Cases" icon={Icon.Cases} />
         <table className="table">
           <thead><tr><th>Title</th><th>Category</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
           <tbody>

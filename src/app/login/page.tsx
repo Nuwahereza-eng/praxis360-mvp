@@ -1,15 +1,24 @@
 import Link from "next/link";
 import { loginAction, quickLoginAction } from "./actions";
+import { Icon, type LucideIcon } from "@/components/icons";
 
 export const dynamic = "force-dynamic";
 
-const ROLE_TILES = [
+const ROLE_TILES: {
+  role: string;
+  title: string;
+  email: string;
+  blurb: string;
+  accent: string;
+  icon: LucideIcon;
+}[] = [
   {
     role: "STUDENT",
     title: "Student",
     email: "student@umi.ac.ug",
     blurb: "See feedback, learning gaps, raise issues, complete evaluations.",
     accent: "from-primary to-primary-container",
+    icon: Icon.Learning,
   },
   {
     role: "LECTURER",
@@ -17,6 +26,7 @@ const ROLE_TILES = [
     email: "lecturer@umi.ac.ug",
     blurb: "Mark work with AI feedback quality, spot students at risk.",
     accent: "from-secondary to-tertiary-container",
+    icon: Icon.MarkAssessment,
   },
   {
     role: "DEPARTMENT_OFFICER",
@@ -24,13 +34,15 @@ const ROLE_TILES = [
     email: "ict@umi.ac.ug",
     blurb: "Receive routed issues, resolve cases, communicate with students.",
     accent: "from-tertiary to-primary",
+    icon: Icon.Cases,
   },
   {
     role: "QA",
     title: "Quality Assurance",
     email: "qa@umi.ac.ug",
-    blurb: "Institution-wide intelligence, publish You Said → We Did.",
+    blurb: "Institution-wide intelligence, publish You Said, We Did.",
     accent: "from-primary-container to-secondary",
+    icon: Icon.Insights,
   },
   {
     role: "ADMIN",
@@ -38,8 +50,9 @@ const ROLE_TILES = [
     email: "admin@umi.ac.ug",
     blurb: "Users, faculties, departments, courses, evaluations.",
     accent: "from-tertiary-container to-primary",
+    icon: Icon.Shield,
   },
-] as const;
+];
 
 export default function LoginPage({ searchParams }: { searchParams: { error?: string } }) {
   return (
@@ -69,23 +82,29 @@ export default function LoginPage({ searchParams }: { searchParams: { error?: st
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-8">
-          {ROLE_TILES.map((t) => (
-            <form action={quickLoginAction} key={t.role} className="h-full">
-              <input type="hidden" name="role" value={t.role} />
-              <button
-                type="submit"
-                className="w-full h-full text-left rounded-xl border border-outline-variant bg-surface-container-lowest hover:shadow-md transition p-5 flex flex-col gap-2"
-              >
-                <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${t.accent} text-on-primary grid place-items-center font-bold`}>
-                  {t.title[0]}
-                </div>
-                <div className="font-semibold text-base">{t.title}</div>
-                <div className="text-xs text-on-surface-variant font-mono break-all">{t.email}</div>
-                <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{t.blurb}</p>
-                <span className="mt-auto pt-3 text-sm font-semibold text-primary">Enter as {t.title} →</span>
-              </button>
-            </form>
-          ))}
+          {ROLE_TILES.map((t) => {
+            const TIcon = t.icon;
+            return (
+              <form action={quickLoginAction} key={t.role} className="h-full">
+                <input type="hidden" name="role" value={t.role} />
+                <button
+                  type="submit"
+                  className="w-full h-full text-left rounded-xl border border-outline-variant bg-surface-container-lowest hover:shadow-md hover:border-primary/40 transition p-5 flex flex-col gap-2"
+                >
+                  <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${t.accent} text-on-primary grid place-items-center`}>
+                    <TIcon className="w-5 h-5" strokeWidth={2} />
+                  </div>
+                  <div className="font-semibold text-base">{t.title}</div>
+                  <div className="text-xs text-on-surface-variant font-mono break-all">{t.email}</div>
+                  <p className="text-xs text-on-surface-variant mt-1 leading-relaxed">{t.blurb}</p>
+                  <span className="mt-auto pt-3 text-sm font-semibold text-primary inline-flex items-center gap-1">
+                    Sign in
+                    <Icon.ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+                  </span>
+                </button>
+              </form>
+            );
+          })}
         </div>
 
         <div className="max-w-md mx-auto mt-12">

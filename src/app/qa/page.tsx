@@ -1,8 +1,9 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/ai";
-import { KPI, InsightCard } from "@/components/ui";
+import { KPI, InsightCard, SectionHeader, PageHero } from "@/components/ui";
 import { DonutChart, StackedBar, Gauge, CHART_COLORS } from "@/components/Charts";
+import { Icon } from "@/components/icons";
 import Link from "next/link";
 
 export default async function QADashboard() {
@@ -86,31 +87,33 @@ export default async function QADashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Academic & Student Experience Intelligence</h1>
-        <p className="text-on-surface-variant text-sm">Semester {semester?.name} • {semester?.academicYear}</p>
-      </div>
+      <PageHero
+        eyebrow="Quality Assurance"
+        title="Academic & Student Experience Intelligence"
+        subtitle={`Semester ${semester?.name ?? ""} • ${semester?.academicYear ?? ""}`}
+        icon={Icon.Insights}
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KPI label="Feedback Quality" value={`${feedbackQualityAvg}`} hint="TUAA composite" tone={feedbackQualityAvg > 70 ? "success" : "warning"} />
-        <KPI label="On-time Feedback" value={`${onTimePct}%`} tone={onTimePct > 70 ? "success" : "warning"} />
-        <KPI label="Eval. Response Rate" value={`${responsePct}%`} tone={responsePct > 60 ? "success" : "warning"} />
-        <KPI label="Issue Resolution" value={`${resolutionPct}%`} tone={resolutionPct > 60 ? "success" : "warning"} />
-        <KPI label="Verified Resolution" value={`${verifiedPct}%`} />
-        <KPI label="Avg. Resolution" value={`${avgResolutionDays.toFixed(1)}d`} />
-        <KPI label="Students at Risk" value={atRisk} tone={atRisk > 0 ? "warning" : "success"} />
-        <KPI label="Recovered Gaps" value={`${recoveredGaps} (${recoveryRate}%)`} tone="success" />
+        <KPI label="Feedback Quality" value={`${feedbackQualityAvg}`} hint="TUAA composite" tone={feedbackQualityAvg > 70 ? "success" : "warning"} icon={Icon.Star} />
+        <KPI label="On-time Feedback" value={`${onTimePct}%`} tone={onTimePct > 70 ? "success" : "warning"} icon={Icon.Clock} />
+        <KPI label="Eval. Response Rate" value={`${responsePct}%`} tone={responsePct > 60 ? "success" : "warning"} icon={Icon.Evaluations} />
+        <KPI label="Issue Resolution" value={`${resolutionPct}%`} tone={resolutionPct > 60 ? "success" : "warning"} icon={Icon.Resolved} />
+        <KPI label="Verified Resolution" value={`${verifiedPct}%`} icon={Icon.Shield} />
+        <KPI label="Avg. Resolution" value={`${avgResolutionDays.toFixed(1)}d`} icon={Icon.Trend} />
+        <KPI label="Students at Risk" value={atRisk} tone={atRisk > 0 ? "warning" : "success"} icon={Icon.AtRisk} />
+        <KPI label="Recovered Gaps" value={`${recoveredGaps} (${recoveryRate}%)`} tone="success" icon={Icon.Recovery} />
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
         <div className="card-p">
-          <div className="section-title mb-3">AI Insights</div>
+          <SectionHeader title="AI Insights" icon={Icon.Ai} />
           <div className="space-y-3">
             {insights.map((i, idx) => <InsightCard key={idx} severity={i.severity} text={i.text} action={i.action} />)}
           </div>
         </div>
         <div className="card-p">
-          <div className="section-title mb-3">Issues by category</div>
+          <SectionHeader title="Issues by category" icon={Icon.Analytics} />
           <DonutChart
             data={catData}
             centerValue={totalIssues}
@@ -121,11 +124,11 @@ export default async function QADashboard() {
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card-p md:col-span-2">
-          <div className="section-title mb-3">Issue pipeline</div>
+          <SectionHeader title="Issue pipeline" icon={Icon.Trend} />
           <StackedBar segments={pipeline} height={26} />
         </div>
         <div className="card-p">
-          <div className="section-title mb-3">Loop-closing performance</div>
+          <SectionHeader title="Loop-closing performance" icon={Icon.Target} />
           <div className="grid grid-cols-3 gap-2">
             <Gauge value={onTimePct} label="On-time feedback" />
             <Gauge value={responsePct} label="Eval response" />
@@ -135,27 +138,35 @@ export default async function QADashboard() {
       </div>
 
       <div className="card-p border-l-4 border-error">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <div className="section-title">🔥 Repeat-pattern spikes (last 7 days)</div>
-            <div className="text-xs text-on-surface-variant mt-1">
-              Categories where volume is ≥ 2× the 30-day baseline — investigate before they escalate.
-            </div>
-          </div>
-          <Link href="/qa/voice" className="link text-sm">View student voice →</Link>
-        </div>
+        <SectionHeader
+          title="Repeat-pattern spikes (last 7 days)"
+          subtitle="Categories where volume is ≥ 2× the 30-day baseline — investigate before they escalate."
+          icon={Icon.Flame}
+          right={
+            <Link href="/qa/voice" className="link text-sm inline-flex items-center gap-1">
+              View student voice
+              <Icon.ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+            </Link>
+          }
+        />
         {spikes.length === 0 ? (
-          <div className="text-sm text-on-surface-variant py-2">
-            ✅ No abnormal spikes detected. All categories are within normal weekly range.
+          <div className="text-sm text-on-surface-variant py-2 inline-flex items-center gap-2">
+            <Icon.Check className="w-4 h-4 text-success" strokeWidth={2.5} />
+            No abnormal spikes detected. All categories are within normal weekly range.
           </div>
         ) : (
           <div className="space-y-2">
             {spikes.map((s) => (
               <div key={s.category} className="flex items-center justify-between rounded-lg border border-error/30 bg-error-container/40 p-3">
-                <div>
-                  <div className="font-semibold text-sm">{s.category}</div>
-                  <div className="text-xs text-on-surface-variant mt-0.5">
-                    {s.weekly} this week vs {s.baseline.toFixed(1)} weekly baseline
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-error text-on-error grid place-items-center shrink-0">
+                    <Icon.Flame className="w-4 h-4" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <div className="font-semibold text-sm">{s.category}</div>
+                    <div className="text-xs text-on-surface-variant mt-0.5">
+                      {s.weekly} this week vs {s.baseline.toFixed(1)} weekly baseline
+                    </div>
                   </div>
                 </div>
                 <div className="text-right">
@@ -169,10 +180,16 @@ export default async function QADashboard() {
       </div>
 
       <div className="card-p">
-        <div className="flex items-center justify-between mb-3">
-          <div className="section-title">Recent Institutional Actions</div>
-          <Link href="/qa/actions" className="link text-sm">Manage →</Link>
-        </div>
+        <SectionHeader
+          title="Recent Institutional Actions"
+          icon={Icon.Actions}
+          right={
+            <Link href="/qa/actions" className="link text-sm inline-flex items-center gap-1">
+              Manage
+              <Icon.ArrowRight className="w-3.5 h-3.5" strokeWidth={2} />
+            </Link>
+          }
+        />
         <ul className="divide-y divide-outline-variant">
           {actions.map((a) => (
             <li key={a.id} className="py-3 flex items-center justify-between">

@@ -4,13 +4,14 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { submitEvaluationAction } from "./actions";
 import { getEvaluationFormForCourse } from "@/lib/evaluationForm";
+import { Icon, type LucideIcon } from "@/components/icons";
 
-const FACE_SCALE: { value: number; face: string; label: string; tone: string }[] = [
-  { value: 1, face: "😞", label: "Strongly disagree", tone: "hover:bg-error-container hover:border-error/40" },
-  { value: 2, face: "🙁", label: "Disagree", tone: "hover:bg-warning-container hover:border-warning/40" },
-  { value: 3, face: "😐", label: "Neutral", tone: "hover:bg-surface-container hover:border-outline-variant" },
-  { value: 4, face: "🙂", label: "Agree", tone: "hover:bg-info-container hover:border-info/40" },
-  { value: 5, face: "😍", label: "Strongly agree", tone: "hover:bg-success-container hover:border-success/40" },
+const FACE_SCALE: { value: number; icon: LucideIcon; label: string; tone: string; iconColor: string }[] = [
+  { value: 1, icon: Icon.Angry, label: "Strongly disagree", tone: "hover:bg-error-container hover:border-error/40", iconColor: "text-error" },
+  { value: 2, icon: Icon.Frown, label: "Disagree", tone: "hover:bg-warning-container hover:border-warning/40", iconColor: "text-warning" },
+  { value: 3, icon: Icon.Meh, label: "Neutral", tone: "hover:bg-surface-container hover:border-outline-variant", iconColor: "text-on-surface-variant" },
+  { value: 4, icon: Icon.Smile, label: "Agree", tone: "hover:bg-info-container hover:border-info/40", iconColor: "text-info" },
+  { value: 5, icon: Icon.Laugh, label: "Strongly agree", tone: "hover:bg-success-container hover:border-success/40", iconColor: "text-success" },
 ];
 
 const QUICK_CHIPS = [
@@ -55,9 +56,15 @@ export default async function EvaluateCourse({ params }: { params: { courseId: s
         <h1 className="text-xl md:text-2xl font-bold mt-1">{course?.name}</h1>
         <div className="text-xs opacity-90 mt-1">{course?.code}</div>
         <div className="flex flex-wrap items-center gap-2 mt-3 text-xs">
-          <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">🔒 100% anonymous</span>
-          <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">⏱ ~3 minutes</span>
-          <span className="inline-flex items-center gap-1 bg-white/15 px-2.5 py-1 rounded-full">
+          <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+            <Icon.Shield className="w-3.5 h-3.5" strokeWidth={2} />
+            100% anonymous
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
+            <Icon.Clock className="w-3.5 h-3.5" strokeWidth={2} />
+            ~3 minutes
+          </span>
+          <span className="inline-flex items-center gap-1.5 bg-white/15 px-2.5 py-1 rounded-full">
             {ratingQuestions.length} quick ratings + optional comments
           </span>
         </div>
@@ -66,7 +73,9 @@ export default async function EvaluateCourse({ params }: { params: { courseId: s
       {/* Anonymity assurance */}
       <div className="card-p border-info/30 bg-info-container/40">
         <div className="flex items-start gap-3">
-          <div className="text-xl">🛡️</div>
+          <div className="w-9 h-9 rounded-lg bg-info text-on-info grid place-items-center shrink-0">
+            <Icon.Shield className="w-4 h-4" strokeWidth={2} />
+          </div>
           <div className="text-sm">
             <div className="font-semibold">You are anonymous.</div>
             <div className="text-on-surface-variant text-xs mt-0.5">
@@ -88,25 +97,28 @@ export default async function EvaluateCourse({ params }: { params: { courseId: s
               </div>
             </div>
             <div className="grid grid-cols-5 gap-2">
-              {FACE_SCALE.map((f) => (
-                <label
-                  key={f.value}
-                  className={`face-option ${f.tone}`}
-                  title={f.label}
-                >
-                  <input
-                    type="radio"
-                    name={`q_${q.id}`}
-                    value={f.value}
-                    required
-                    className="sr-only peer"
-                  />
-                  <div className="text-2xl md:text-3xl">{f.face}</div>
-                  <div className="text-[10px] text-on-surface-variant mt-1 leading-tight text-center">
-                    {f.label}
-                  </div>
-                </label>
-              ))}
+              {FACE_SCALE.map((f) => {
+                const FIcon = f.icon;
+                return (
+                  <label
+                    key={f.value}
+                    className={`face-option ${f.tone}`}
+                    title={f.label}
+                  >
+                    <input
+                      type="radio"
+                      name={`q_${q.id}`}
+                      value={f.value}
+                      required
+                      className="sr-only peer"
+                    />
+                    <FIcon className={`w-7 h-7 md:w-8 md:h-8 ${f.iconColor}`} strokeWidth={1.8} />
+                    <div className="text-[10px] text-on-surface-variant mt-1 leading-tight text-center">
+                      {f.label}
+                    </div>
+                  </label>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -148,7 +160,10 @@ export default async function EvaluateCourse({ params }: { params: { courseId: s
             </div>
             <div className="flex gap-2">
               <Link href="/student/evaluations" className="btn-ghost text-sm">Cancel</Link>
-              <button type="submit" className="btn-primary">Submit anonymously ✓</button>
+              <button type="submit" className="btn-primary inline-flex items-center gap-1.5">
+                <Icon.Check className="w-4 h-4" strokeWidth={2.5} />
+                Submit anonymously
+              </button>
             </div>
           </div>
         </div>
