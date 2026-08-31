@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LoopStrip } from "@/components/ui";
+import { Icon } from "@/components/icons";
 
 export default function LandingPage() {
   return (
@@ -71,16 +73,58 @@ export default function LandingPage() {
           </p>
           <div className="grid md:grid-cols-3 gap-6 mt-10">
             <div className="card-p">
-              <div className="text-xs font-semibold text-secondary uppercase tracking-wide">Academic Feedback</div>
-              <p className="mt-2 font-medium">Assess → Give Feedback → Understand → Act → Verify → Improve</p>
+              <div className="text-xs font-semibold text-primary uppercase tracking-wide">Academic Feedback</div>
+              <p className="mt-1 font-semibold text-on-surface">Close the learning loop.</p>
+              <p className="text-sm text-on-surface-variant mt-1">Every score becomes a step toward verified improvement.</p>
+              <div className="mt-4">
+                <LoopStrip
+                  variant="primary"
+                  steps={[
+                    { label: "Assess", icon: Icon.Assessments },
+                    { label: "Feedback", icon: Icon.Feedback },
+                    { label: "Diagnose", icon: Icon.Insights },
+                    { label: "Recover", icon: Icon.Recovery },
+                    { label: "Verify", icon: Icon.Check },
+                    { label: "Improve", icon: Icon.Trend },
+                  ]}
+                />
+              </div>
             </div>
             <div className="card-p">
               <div className="text-xs font-semibold text-secondary uppercase tracking-wide">Student Voice</div>
-              <p className="mt-2 font-medium">Raise → Categorize → Route → Act → Communicate → Verify → Improve</p>
+              <p className="mt-1 font-semibold text-on-surface">Every voice, a visible path.</p>
+              <p className="text-sm text-on-surface-variant mt-1">From an anonymous concern to a verified resolution.</p>
+              <div className="mt-4">
+                <LoopStrip
+                  variant="secondary"
+                  steps={[
+                    { label: "Raise", icon: Icon.RaiseIssue },
+                    { label: "Route", icon: Icon.Routing },
+                    { label: "Act", icon: Icon.Send },
+                    { label: "Update", icon: Icon.Chat },
+                    { label: "Verify", icon: Icon.Check },
+                    { label: "Improve", icon: Icon.Trend },
+                  ]}
+                />
+              </div>
             </div>
             <div className="card-p">
-              <div className="text-xs font-semibold text-secondary uppercase tracking-wide">Teaching Evaluation</div>
-              <p className="mt-2 font-medium">Evaluate → Analyze → Identify → Act → Communicate → Improve</p>
+              <div className="text-xs font-semibold text-tertiary uppercase tracking-wide">Teaching Evaluation</div>
+              <p className="mt-1 font-semibold text-on-surface">Turn ratings into action.</p>
+              <p className="text-sm text-on-surface-variant mt-1">Anonymous evaluations become institutional response.</p>
+              <div className="mt-4">
+                <LoopStrip
+                  variant="tertiary"
+                  steps={[
+                    { label: "Evaluate", icon: Icon.Evaluations },
+                    { label: "Analyze", icon: Icon.Analytics },
+                    { label: "Identify", icon: Icon.Insights },
+                    { label: "Act", icon: Icon.Send },
+                    { label: "Announce", icon: Icon.YouSaid },
+                    { label: "Improve", icon: Icon.Trend },
+                  ]}
+                />
+              </div>
             </div>
           </div>
         </div>

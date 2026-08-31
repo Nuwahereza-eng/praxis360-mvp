@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { KPI, Badge, SectionHeader } from "@/components/ui";
+import { KPI, Badge, SectionHeader, LoopStrip } from "@/components/ui";
 import { BarChart, DonutChart, CHART_COLORS } from "@/components/Charts";
 import { Icon } from "@/components/icons";
 import { fmtDate, statusColor } from "@/lib/utils";
@@ -53,9 +53,26 @@ export default async function LecturerDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Lecturer Dashboard</h1>
-        <p className="text-on-surface-variant text-sm">Assess → Give Feedback → Understand → Act → Verify → Improve</p>
+      <div className="rounded-2xl bg-gradient-to-br from-primary/10 via-secondary/5 to-tertiary/10 border border-outline-variant p-5 space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider font-semibold text-primary">Academic feedback loop</div>
+            <h1 className="text-2xl font-bold mt-1">Lecturer Dashboard</h1>
+            <p className="text-on-surface-variant text-sm mt-1">
+              Close the learning loop — every score becomes a visible step toward improvement.
+            </p>
+          </div>
+        </div>
+        <LoopStrip
+          steps={[
+            { label: "Assess", icon: Icon.Assessments },
+            { label: "Feedback", icon: Icon.Feedback },
+            { label: "Diagnose", icon: Icon.Insights },
+            { label: "Recover", icon: Icon.Recovery },
+            { label: "Verify", icon: Icon.Check },
+            { label: "Improve", icon: Icon.Trend },
+          ]}
+        />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

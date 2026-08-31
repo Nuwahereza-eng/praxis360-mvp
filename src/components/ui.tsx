@@ -184,6 +184,55 @@ export function LoopSteps({ steps, current }: { steps: string[]; current: number
   );
 }
 
+/**
+ * Visual pipeline showing the closed loop as icon pills + connectors.
+ * Replaces the plain "A → B → C" text tagline.
+ */
+export function LoopStrip({
+  steps,
+  variant = "primary",
+}: {
+  steps: { label: string; icon: LucideIcon }[];
+  variant?: "primary" | "secondary" | "tertiary" | "muted";
+}) {
+  const tones: Record<string, string> = {
+    primary: "bg-primary-container text-on-primary-container",
+    secondary: "bg-secondary-container text-on-secondary-container",
+    tertiary: "bg-tertiary-container text-on-tertiary-container",
+    muted: "bg-surface-container text-on-surface",
+  };
+  const pill = tones[variant] ?? tones.primary;
+  return (
+    <div className="flex items-center flex-wrap gap-y-2">
+      {steps.map((s, i) => {
+        const IconEl = s.icon;
+        return (
+          <div key={i} className="inline-flex items-center">
+            <div className={cn("inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold", pill)}>
+              <IconEl className="w-3.5 h-3.5" strokeWidth={2.25} />
+              <span className="whitespace-nowrap">{s.label}</span>
+            </div>
+            {i < steps.length - 1 && (
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="w-3.5 h-3.5 mx-1 text-on-surface-variant/50"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function SLAPill({
   createdAt,
   priority,
