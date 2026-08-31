@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { submitEvaluationAction } from "./actions";
+import { getEvaluationFormForCourse } from "@/lib/evaluationForm";
 
 const FACE_SCALE: { value: number; face: string; label: string; tone: string }[] = [
   { value: 1, face: "😞", label: "Strongly disagree", tone: "hover:bg-error-container hover:border-error/40" },
@@ -36,7 +37,7 @@ export default async function EvaluateCourse({ params }: { params: { courseId: s
   }
 
   const course = await prisma.course.findUnique({ where: { id: params.courseId } });
-  const questions = await prisma.evaluationQuestion.findMany({ orderBy: { orderIdx: "asc" } });
+  const { questions } = await getEvaluationFormForCourse(params.courseId);
   const ratingQuestions = questions.filter((q) => q.type === "RATING");
   const commentQuestions = questions.filter((q) => q.type !== "RATING");
   const existing = await prisma.evaluationResponse.count({

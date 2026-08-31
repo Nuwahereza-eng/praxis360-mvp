@@ -2,6 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { AIService } from "@/lib/ai";
 import { KPI } from "@/components/ui";
+import Link from "next/link";
 
 export default async function QAEvaluations() {
   await requireRole("QA");
@@ -13,14 +14,21 @@ export default async function QAEvaluations() {
     const rated = responses.filter((r) => r.question.type === "RATING" && r.rating);
     const avgRating = rated.length > 0 ? rated.reduce((s, r) => s + (r.rating || 0), 0) / rated.length : 0;
     const comments = responses.filter((r) => r.question.type === "TEXT" && r.text).map((r) => r.text!) as string[];
-    return { course: c, responseRate, avgRating, comments };
+    const customQs = await prisma.evaluationQuestion.count({ where: { courseId: c.id } });
+    return { course: c, responseRate, avgRating, comments, customQs };
   }));
   const overall = rows.length > 0 ? rows.reduce((s, r) => s + r.responseRate, 0) / rows.length : 0;
   const allComments = rows.flatMap((r) => r.comments);
   const themes = AIService.extractEvaluationThemes(allComments);
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Teaching Evaluation</h1>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">Teaching Evaluation</h1>
+          <p className="text-on-surface-variant text-sm">Aggregated results • Manage the questions students see per course.</p>
+        </div>
+        <Link href="/qa/evaluations/form" className="btn-primary">✏️ Edit evaluation forms</Link>
+      </div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <KPI label="Overall response rate" value={`${overall.toFixed(0)}%`} tone={overall > 60 ? "success" : "warning"} />
         <KPI label="Courses" value={rows.length} />
@@ -29,7 +37,7 @@ export default async function QAEvaluations() {
       <div className="card-p">
         <div className="section-title mb-3">By course</div>
         <table className="table">
-          <thead><tr><th>Course</th><th>Enrolled</th><th>Response %</th><th>Avg rating (of 5)</th></tr></thead>
+          <thead><tr><th>Course</th><th>Enrolled</th><th>Response %</th><th>Avg rating (of 5)</th><th>Form</th><th className="text-right">Edit</th></tr></thead>
           <tbody>
             {rows.map((r) => (
               <tr key={r.course.id}>
@@ -37,6 +45,12 @@ export default async function QAEvaluations() {
                 <td>{r.course.enrollments.length}</td>
                 <td>{r.responseRate.toFixed(0)}%</td>
                 <td>{r.avgRating > 0 ? r.avgRating.toFixed(1) : "—"}</td>
+                <td className="text-xs text-on-surface-variant">
+                  {r.customQs > 0 ? `Custom (${r.customQs})` : "Global"}
+                </td>
+                <td className="text-right">
+                  <Link href={`/qa/evaluations/form/${r.course.id}`} className="link text-sm">Edit →</Link>
+                </td>
               </tr>
             ))}
           </tbody>

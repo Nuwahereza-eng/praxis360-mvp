@@ -94,6 +94,7 @@ model Course {
   learningOutcomes LearningOutcome[]
   learningGaps     LearningGap[]
   evaluationResponses EvaluationResponse[]
+  evaluationQuestions EvaluationQuestion[]
 }
 
 model Enrollment {
@@ -281,11 +282,17 @@ model IssueActionPoint {
 }
 
 model EvaluationQuestion {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   text      String
-  type      String // RATING | TEXT
+  type      String  // RATING | TEXT
   orderIdx  Int
+  // null = global template (fallback for any course without a custom form).
+  // Non-null = custom question for that specific course.
+  courseId  String?
+  course    Course? @relation(fields: [courseId], references: [id], onDelete: Cascade)
   responses EvaluationResponse[]
+
+  @@index([courseId])
 }
 
 model EvaluationResponse {

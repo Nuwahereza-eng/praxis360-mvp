@@ -40,6 +40,7 @@ const NAV: Record<Role, NavItem[]> = {
     { label: "Intelligence Dashboard", href: "/qa" },
     { label: "Assessment Feedback", href: "/qa/feedback" },
     { label: "Teaching Evaluation", href: "/qa/evaluations" },
+    { label: "Evaluation Forms", href: "/qa/evaluations/form" },
     { label: "Student Voice", href: "/qa/voice" },
     { label: "Learning Analytics", href: "/qa/learning" },
     { label: "Institutional Actions", href: "/qa/actions" },

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { Badge, ProgressBar } from "@/components/ui";
 import { fmtDate } from "@/lib/utils";
+import { countRatingQuestionsForCourse } from "@/lib/evaluationForm";
 
 export default async function StudentEvaluations({
   searchParams,
@@ -18,10 +19,10 @@ export default async function StudentEvaluations({
     where: { studentId: s.sub, semesterId: semester?.id },
     include: { course: { include: { lecturer: true } } },
   });
-  const totalQuestions = await prisma.evaluationQuestion.count({ where: { type: "RATING" } });
 
   const perCourse = await Promise.all(
     enrollments.map(async (e) => {
+      const totalQuestions = await countRatingQuestionsForCourse(e.courseId);
       const answered = await prisma.evaluationResponse.count({
         where: { studentId: s.sub, courseId: e.courseId, question: { type: "RATING" } },
       });
@@ -30,11 +31,11 @@ export default async function StudentEvaluations({
         where: { courseId: e.courseId }, select: { studentId: true }, distinct: ["studentId"],
       });
       const participationPct = totalEnrolled === 0 ? 0 : (participants.length / totalEnrolled) * 100;
-      return { enrollment: e, answered, participationPct, participants: participants.length, totalEnrolled };
+      return { enrollment: e, answered, totalQuestions, participationPct, participants: participants.length, totalEnrolled };
     }),
   );
 
-  const doneCourses = perCourse.filter((c) => c.answered >= totalQuestions).length;
+  const doneCourses = perCourse.filter((c) => c.totalQuestions > 0 && c.answered >= c.totalQuestions).length;
   const pendingCourses = perCourse.length - doneCourses;
   const overallPct = perCourse.length === 0 ? 0 : Math.round((doneCourses / perCourse.length) * 100);
 
@@ -123,8 +124,8 @@ export default async function StudentEvaluations({
         </div>
       )}
 
-      {evalOpen && perCourse.map(({ enrollment, answered, participationPct, participants, totalEnrolled }) => {
-        const done = answered >= totalQuestions;
+      {evalOpen && perCourse.map(({ enrollment, answered, totalQuestions, participationPct, participants, totalEnrolled }) => {
+        const done = totalQuestions > 0 && answered >= totalQuestions;
         const behindClass = participationPct >= 40 && !done;
         return (
           <div key={enrollment.id} className={`card-p ${done ? "border-success/30" : ""}`}>

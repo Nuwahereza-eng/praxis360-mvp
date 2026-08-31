@@ -3,11 +3,12 @@
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { getEvaluationFormForCourse } from "@/lib/evaluationForm";
 
 export async function submitEvaluationAction(formData: FormData) {
   const s = await requireRole("STUDENT");
   const courseId = String(formData.get("courseId"));
-  const questions = await prisma.evaluationQuestion.findMany();
+  const { questions } = await getEvaluationFormForCourse(courseId);
   for (const q of questions) {
     const val = formData.get(`q_${q.id}`);
     if (val === null || val === "") continue;

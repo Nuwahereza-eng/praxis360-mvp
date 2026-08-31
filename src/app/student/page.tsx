@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { KPI, Badge, LoopSteps } from "@/components/ui";
 import { LineChart, DonutChart, CHART_COLORS } from "@/components/Charts";
 import { fmtDate, statusColor } from "@/lib/utils";
+import { countRatingQuestionsForCourse } from "@/lib/evaluationForm";
 import Link from "next/link";
 
 export default async function StudentDashboard() {
@@ -21,13 +22,14 @@ export default async function StudentDashboard() {
   let pendingEvals = 0;
   let daysLeft = 0;
   if (evalOpen && semester) {
-    const totalRatingQs = await prisma.evaluationQuestion.count({ where: { type: "RATING" } });
     const myEnrollments = await prisma.enrollment.findMany({
       where: { studentId: s.sub, semesterId: semester.id },
       select: { courseId: true },
     });
     const pendingChecks = await Promise.all(
       myEnrollments.map(async (e): Promise<number> => {
+        const totalRatingQs = await countRatingQuestionsForCourse(e.courseId);
+        if (totalRatingQs === 0) return 0;
         const answered = await prisma.evaluationResponse.count({
           where: { studentId: s.sub, courseId: e.courseId, question: { type: "RATING" } },
         });
