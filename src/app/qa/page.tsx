@@ -52,6 +52,25 @@ export default async function QADashboard() {
   const catRaw = await prisma.issue.groupBy({ by: ["category"], _count: true, orderBy: { _count: { category: "desc" } } });
   const catData = catRaw.map((c) => ({ label: c.category, value: Number(c._count) }));
 
+  // Repeat-pattern spike detection: categories where last-7d volume ≥ 2× weekly baseline (previous 30 days)
+  const sevenDaysAgo = new Date(now.getTime() - 7 * 86400000);
+  const thirtySevenDaysAgo = new Date(now.getTime() - 37 * 86400000);
+  const [recentCatCounts, baselineCatCounts] = await Promise.all([
+    prisma.issue.groupBy({ by: ["category"], _count: true, where: { createdAt: { gte: sevenDaysAgo } } }),
+    prisma.issue.groupBy({ by: ["category"], _count: true, where: { createdAt: { gte: thirtySevenDaysAgo, lt: sevenDaysAgo } } }),
+  ]);
+  const baselineMap = new Map(baselineCatCounts.map((c) => [c.category, Number(c._count) / (30 / 7)] as const));
+  const spikes = recentCatCounts
+    .map((c) => {
+      const weekly = Number(c._count);
+      const baseline = baselineMap.get(c.category) ?? 0;
+      const ratio = baseline > 0 ? weekly / baseline : (weekly >= 3 ? 99 : 0);
+      return { category: c.category, weekly, baseline, ratio };
+    })
+    .filter((s) => s.weekly >= 3 && s.ratio >= 2)
+    .sort((a, b) => b.ratio - a.ratio)
+    .slice(0, 5);
+
   // Status pipeline for stacked bar
   const statusRaw = await prisma.issue.groupBy({ by: ["status"], _count: true });
   const statusMap = new Map(statusRaw.map((s) => [s.status, Number(s._count)] as const));
@@ -113,6 +132,40 @@ export default async function QADashboard() {
             <Gauge value={resolutionPct} label="Resolution" />
           </div>
         </div>
+      </div>
+
+      <div className="card-p border-l-4 border-error">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <div className="section-title">🔥 Repeat-pattern spikes (last 7 days)</div>
+            <div className="text-xs text-on-surface-variant mt-1">
+              Categories where volume is ≥ 2× the 30-day baseline — investigate before they escalate.
+            </div>
+          </div>
+          <Link href="/qa/voice" className="link text-sm">View student voice →</Link>
+        </div>
+        {spikes.length === 0 ? (
+          <div className="text-sm text-on-surface-variant py-2">
+            ✅ No abnormal spikes detected. All categories are within normal weekly range.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {spikes.map((s) => (
+              <div key={s.category} className="flex items-center justify-between rounded-lg border border-error/30 bg-error-container/40 p-3">
+                <div>
+                  <div className="font-semibold text-sm">{s.category}</div>
+                  <div className="text-xs text-on-surface-variant mt-0.5">
+                    {s.weekly} this week vs {s.baseline.toFixed(1)} weekly baseline
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold text-error">{s.ratio >= 99 ? "NEW" : `${s.ratio.toFixed(1)}×`}</div>
+                  <div className="text-[10px] uppercase tracking-wider text-error font-semibold">Spike</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card-p">

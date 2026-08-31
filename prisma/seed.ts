@@ -15,6 +15,8 @@ async function main() {
   await prisma.evaluationQuestion.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.institutionalAction.deleteMany();
+  await prisma.issueUpvote.deleteMany();
+  await prisma.issueAttachment.deleteMany();
   await prisma.issueUpdate.deleteMany();
   await prisma.issueActionPoint.deleteMany();
   await prisma.issue.deleteMany();
@@ -24,6 +26,8 @@ async function main() {
   await prisma.criterionResult.deleteMany();
   await prisma.assessmentResult.deleteMany();
   await prisma.rubricCriterion.deleteMany();
+  await prisma.rubricTemplateCriterion.deleteMany();
+  await prisma.rubricTemplate.deleteMany();
   await prisma.learningOutcome.deleteMany();
   await prisma.assessment.deleteMany();
   await prisma.enrollment.deleteMany();
@@ -337,6 +341,63 @@ async function main() {
         data: { userId: primaryStudent.id, title: "Issue update", message: `Your issue "${issue.title}" is now ${issue.status}.`, type: "ISSUE", relatedEntityType: "ISSUE", relatedEntityId: issue.id },
       });
     }
+  }
+
+  // Mark ~half of issues as public and add upvotes for a lively community board
+  const allIssuesForBoard = await prisma.issue.findMany({ orderBy: { createdAt: "desc" } });
+  const publicIssues = allIssuesForBoard.slice(0, Math.min(8, allIssuesForBoard.length));
+  for (const iss of publicIssues) {
+    await prisma.issue.update({ where: { id: iss.id }, data: { isPublic: true } });
+  }
+  // Distribute upvotes: hottest issues get more
+  const upvoterPool = [primaryStudent, ...students].slice(0, 8);
+  for (let idx = 0; idx < publicIssues.length; idx++) {
+    const iss = publicIssues[idx];
+    const upvoteCount = Math.max(1, upvoterPool.length - idx - 1);
+    for (let u = 0; u < upvoteCount && u < upvoterPool.length; u++) {
+      const voter = upvoterPool[(u + idx) % upvoterPool.length];
+      if (voter.id === iss.studentId) continue;
+      try {
+        await prisma.issueUpvote.create({ data: { issueId: iss.id, userId: voter.id } });
+      } catch {
+        // ignore duplicate key
+      }
+    }
+  }
+
+  // Rubric templates for the primary lecturer
+  const rubricLecturer = await prisma.user.findFirst({ where: { role: "LECTURER" } });
+  if (rubricLecturer) {
+    await prisma.rubricTemplate.create({
+      data: {
+        name: "Standard essay rubric",
+        description: "Reusable rubric for coursework essays across modules.",
+        ownerId: rubricLecturer.id,
+        criteria: {
+          create: [
+            { title: "Argument & thesis", description: "Clear, focused thesis with strong argumentation.", maxMarks: 25, orderIdx: 0 },
+            { title: "Use of evidence", description: "Appropriate, well-integrated sources.", maxMarks: 25, orderIdx: 1 },
+            { title: "Structure & clarity", description: "Logical structure and clear writing.", maxMarks: 25, orderIdx: 2 },
+            { title: "Referencing", description: "Correct, consistent citation style.", maxMarks: 25, orderIdx: 3 },
+          ],
+        },
+      },
+    });
+    await prisma.rubricTemplate.create({
+      data: {
+        name: "Practical project rubric",
+        description: "For lab and applied practical assessments.",
+        ownerId: rubricLecturer.id,
+        criteria: {
+          create: [
+            { title: "Technical execution", description: "Correctness and quality of implementation.", maxMarks: 30, orderIdx: 0 },
+            { title: "Problem-solving approach", description: "Method, iteration, and rationale.", maxMarks: 25, orderIdx: 1 },
+            { title: "Documentation", description: "Clear write-up of decisions and results.", maxMarks: 25, orderIdx: 2 },
+            { title: "Presentation & demo", description: "Ability to explain the outcome.", maxMarks: 20, orderIdx: 3 },
+          ],
+        },
+      },
+    });
   }
 
   // Institutional actions (You Said → We Did)

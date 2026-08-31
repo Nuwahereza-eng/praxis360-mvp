@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Badge, LoopSteps } from "@/components/ui";
+import { Badge, LoopSteps, SLAPill, AttachmentList } from "@/components/ui";
 import { fmtDateTime, statusColor } from "@/lib/utils";
 import { officerActionAction } from "./actions";
 
@@ -17,6 +17,7 @@ export default async function CaseDetail({ params }: { params: { id: string } })
       assignedOfficer: true,
       updates: { orderBy: { createdAt: "asc" }, include: { author: true } },
       actionPoints: { orderBy: [{ status: "asc" }, { orderIdx: "asc" }, { createdAt: "asc" }] },
+      attachments: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!issue || (issue.departmentId && issue.departmentId !== me?.departmentId)) notFound();
@@ -42,6 +43,7 @@ export default async function CaseDetail({ params }: { params: { id: string } })
         </div>
       </div>
       <LoopSteps steps={["Submitted","Received","Assigned","In Progress","Resolved","Verified"]} current={stepIndex} />
+      <div><SLAPill createdAt={issue.createdAt} priority={issue.priority} status={issue.status} resolvedAt={issue.resolvedAt} /></div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card-p md:col-span-2 space-y-3">
@@ -201,6 +203,8 @@ export default async function CaseDetail({ params }: { params: { id: string } })
           <button className="btn-primary text-sm">Add action point</button>
         </form>
       </div>
+
+      <AttachmentList attachments={issue.attachments} title="Evidence from student" />
 
       <div className="card-p">
         <div className="section-title mb-2">Timeline</div>

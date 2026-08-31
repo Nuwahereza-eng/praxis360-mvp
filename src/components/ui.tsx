@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { slaPillClass, slaStatus } from "@/lib/sla";
 
 export function KPI({ label, value, hint, tone = "default" }: { label: string; value: React.ReactNode; hint?: string; tone?: "default" | "success" | "warning" | "error" | "info" }) {
   const toneClass = {
@@ -58,6 +59,91 @@ export function LoopSteps({ steps, current }: { steps: string[]; current: number
       <span className="text-xs text-on-surface-variant">
         Step {safeIndex + 1} of {steps.length}
       </span>
+    </div>
+  );
+}
+
+export function SLAPill({
+  createdAt,
+  priority,
+  status,
+  resolvedAt,
+  showLabel = true,
+}: {
+  createdAt: Date | string;
+  priority: string;
+  status: string;
+  resolvedAt?: Date | string | null;
+  showLabel?: boolean;
+}) {
+  const info = slaStatus({
+    createdAt: typeof createdAt === "string" ? new Date(createdAt) : createdAt,
+    priority,
+    status,
+    resolvedAt: resolvedAt ? (typeof resolvedAt === "string" ? new Date(resolvedAt) : resolvedAt) : null,
+  });
+  const dot =
+    info.state === "resolved" ? "●"
+      : info.state === "breached" ? "●"
+      : info.state === "warning" ? "●"
+      : info.state === "watch" ? "●"
+      : "●";
+  return (
+    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold", slaPillClass(info.state))} title={`SLA target based on ${priority} priority`}>
+      <span aria-hidden>{dot}</span>
+      {showLabel ? info.label : info.state}
+    </span>
+  );
+}
+
+export function AttachmentList({
+  attachments,
+  title = "Attachments",
+}: {
+  attachments: {
+    id: string;
+    name: string;
+    mimeType: string;
+    size: number;
+    dataUrl: string;
+    createdAt?: Date | string;
+  }[];
+  title?: string;
+}) {
+  if (!attachments || attachments.length === 0) return null;
+  return (
+    <div className="card-p">
+      <div className="section-title mb-3">📎 {title} ({attachments.length})</div>
+      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        {attachments.map((a) => {
+          const isImage = a.mimeType.startsWith("image/");
+          return (
+            <a
+              key={a.id}
+              href={a.dataUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              download={a.name}
+              className="border border-outline-variant rounded-lg overflow-hidden hover:border-primary transition block bg-surface-container-lowest"
+              title={a.name}
+            >
+              {isImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={a.dataUrl} alt={a.name} className="w-full h-32 object-cover" />
+              ) : (
+                <div className="w-full h-32 flex flex-col items-center justify-center bg-surface-container-low">
+                  <div className="text-3xl">📄</div>
+                  <div className="text-xs text-on-surface-variant mt-1">PDF</div>
+                </div>
+              )}
+              <div className="p-2 text-xs">
+                <div className="font-medium truncate">{a.name}</div>
+                <div className="text-on-surface-variant mt-0.5">{(a.size / 1024).toFixed(0)} KB</div>
+              </div>
+            </a>
+          );
+        })}
+      </div>
     </div>
   );
 }

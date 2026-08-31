@@ -1,8 +1,13 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef } from "react";
 import { ISSUE_CATEGORIES, PrivacyMode } from "@/lib/enums";
-import { classifyPreviewAction, submitIssueAction } from "./actions";
+import {
+  classifyPreviewAction,
+  submitIssueAction,
+  findSimilarIssuesAction,
+  upvoteIssueAction,
+} from "./actions";
 
 type Classification = {
   category: string;
@@ -14,15 +19,37 @@ type Classification = {
   confidence: number;
 };
 
+type SimilarIssue = {
+  id: string;
+  title: string;
+  category: string;
+  departmentName: string;
+  createdAt: Date | string;
+  status: string;
+  priority: string;
+  upvotes: number;
+  matchPct: number;
+};
+
+const MAX_FILES = 5;
+const MAX_BYTES = 2 * 1024 * 1024;
+
 export function RaiseIssueForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
   const [privacy, setPrivacy] = useState<string>(PrivacyMode.IDENTIFIED);
+  const [isPublic, setIsPublic] = useState(true);
   const [classification, setClassification] = useState<Classification | null>(null);
+  const [similar, setSimilar] = useState<SimilarIssue[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [checking, startCheck] = useTransition();
+  const [upvoting, startUpvote] = useTransition();
   const [submitting, setSubmitting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   async function preview() {
     if (!title.trim() || !description.trim()) return;
@@ -34,17 +61,146 @@ export function RaiseIssueForm() {
     });
   }
 
+  async function checkSimilar() {
+    if (!title.trim() || title.trim().length < 6) return;
+    startCheck(async () => {
+      const results = await findSimilarIssuesAction(title, description, category || undefined);
+      setSimilar(results as SimilarIssue[]);
+    });
+  }
+
+  async function handleUpvote(issueId: string) {
+    startUpvote(async () => {
+      const fd = new FormData();
+      fd.set("issueId", issueId);
+      await upvoteIssueAction(fd);
+      setSimilar((prev) =>
+        prev.map((s) => (s.id === issueId ? { ...s, upvotes: s.upvotes + 1 } : s)),
+      );
+    });
+  }
+
+  function onFilesChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setFileError(null);
+    const list = Array.from(e.target.files || []);
+    if (list.length > MAX_FILES) {
+      setFileError(`You can attach up to ${MAX_FILES} files.`);
+      return;
+    }
+    for (const f of list) {
+      if (f.size > MAX_BYTES) {
+        setFileError(`"${f.name}" exceeds 2 MB.`);
+        return;
+      }
+    }
+    setFiles(list);
+  }
+
   return (
     <div className="grid md:grid-cols-2 gap-6">
-      <div className="card-p space-y-4">
+      <form
+        className="card-p space-y-4"
+        encType="multipart/form-data"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          if (submitting) return;
+          setSubmitting(true);
+          const fd = new FormData();
+          fd.set("title", title);
+          fd.set("description", description);
+          fd.set("category", category || classification?.category || "Other");
+          fd.set("location", location);
+          fd.set("privacy", privacy);
+          if (isPublic) fd.set("isPublic", "on");
+          if (classification) {
+            fd.set("issueType", classification.issueType);
+            fd.set("priority", classification.priority);
+            fd.set("responsibleDepartmentCode", classification.responsibleDepartmentCode);
+            fd.set("confidence", String(classification.confidence));
+          }
+          for (const f of files) fd.append("attachments", f);
+          await submitIssueAction(fd);
+        }}
+      >
         <div>
           <label className="label">Title</label>
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Brief summary" required />
+          <input
+            className="input"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onBlur={checkSimilar}
+            placeholder="Brief summary"
+            required
+          />
         </div>
         <div>
           <label className="label">Describe the issue</label>
-          <textarea className="input min-h-[160px]" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Explain what happened, when, and how it affects you" required />
+          <textarea
+            className="input min-h-[140px]"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={checkSimilar}
+            placeholder="Explain what happened, when, and how it affects you"
+            required
+          />
         </div>
+
+        {/* Duplicate detection banner */}
+        {(similar.length > 0 || checking) && (
+          <div className="border border-warning/40 bg-warning-container/60 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-semibold">
+                {checking
+                  ? "🔎 Checking for similar issues…"
+                  : `⚠️ ${similar.length} similar issue${similar.length === 1 ? "" : "s"} already raised`}
+              </div>
+              {!checking && (
+                <button
+                  type="button"
+                  onClick={() => setSimilar([])}
+                  className="text-xs text-on-surface-variant hover:underline"
+                >
+                  Dismiss
+                </button>
+              )}
+            </div>
+            {!checking && (
+              <p className="text-xs text-on-surface-variant mt-1">
+                Upvoting an existing thread carries more weight than duplicate filings.
+              </p>
+            )}
+            <ul className="mt-2 space-y-2">
+              {similar.map((si) => (
+                <li key={si.id} className="border border-outline-variant rounded-md p-2 bg-surface-container-lowest">
+                  <div className="flex items-center justify-between gap-2">
+                    <a
+                      href={`/student/issues/board#${si.id}`}
+                      className="font-medium text-sm hover:underline min-w-0 truncate"
+                    >
+                      {si.title}
+                    </a>
+                    <span className="text-[10px] text-on-surface-variant">{si.matchPct}% match</span>
+                  </div>
+                  <div className="text-xs text-on-surface-variant mt-0.5">
+                    {si.category} • {si.departmentName} • {si.status}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-on-surface-variant">▲ {si.upvotes} upvotes</span>
+                    <button
+                      type="button"
+                      onClick={() => handleUpvote(si.id)}
+                      disabled={upvoting}
+                      className="btn-outline text-xs py-1"
+                    >
+                      ▲ Upvote instead
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="label">Category</label>
@@ -58,6 +214,30 @@ export function RaiseIssueForm() {
             <input className="input" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g. Library" />
           </div>
         </div>
+
+        {/* Attachments */}
+        <div>
+          <label className="label">Attachments (photos or PDF, up to {MAX_FILES}, 2 MB each)</label>
+          <input
+            ref={fileRef}
+            type="file"
+            multiple
+            accept="image/*,application/pdf"
+            onChange={onFilesChange}
+            className="text-sm"
+          />
+          {fileError && <div className="text-xs text-error mt-1">{fileError}</div>}
+          {files.length > 0 && (
+            <ul className="mt-2 flex flex-wrap gap-1 text-xs">
+              {files.map((f) => (
+                <li key={f.name} className="badge bg-surface-container text-on-surface-variant">
+                  📎 {f.name} · {(f.size / 1024).toFixed(0)} KB
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
         <div>
           <label className="label">Privacy</label>
           <div className="flex flex-wrap gap-3 text-sm">
@@ -76,35 +256,32 @@ export function RaiseIssueForm() {
             Confidential issues hide your identity from public views. Anonymous issues do not link to your profile.
           </p>
         </div>
+
+        {/* Public board */}
+        <label className="flex items-start gap-2 border border-primary/30 bg-primary-container/30 rounded-lg p-3 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="mt-1"
+          />
+          <span>
+            <span className="font-semibold">Post to the community board (anonymized)</span>
+            <span className="block text-xs text-on-surface-variant">
+              Classmates can see the issue and upvote it. Your name and personal details are never shown.
+            </span>
+          </span>
+        </label>
+
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={preview} className="btn-outline" disabled={pending || !title || !description}>
             {pending ? "Analysing…" : "AI: classify my issue"}
           </button>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={submitting || !title || !description}
-            onClick={async () => {
-              setSubmitting(true);
-              const fd = new FormData();
-              fd.set("title", title);
-              fd.set("description", description);
-              fd.set("category", category || classification?.category || "Other");
-              fd.set("location", location);
-              fd.set("privacy", privacy);
-              if (classification) {
-                fd.set("issueType", classification.issueType);
-                fd.set("priority", classification.priority);
-                fd.set("responsibleDepartmentCode", classification.responsibleDepartmentCode);
-                fd.set("confidence", String(classification.confidence));
-              }
-              await submitIssueAction(fd);
-            }}
-          >
+          <button type="submit" className="btn-primary" disabled={submitting || !title || !description}>
             {submitting ? "Submitting…" : "Submit issue"}
           </button>
         </div>
-      </div>
+      </form>
 
       <div className="card-p bg-info-container/40 border-info/30">
         <div className="flex items-center justify-between">

@@ -2,7 +2,7 @@ import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Badge, LoopSteps } from "@/components/ui";
+import { Badge, LoopSteps, SLAPill, AttachmentList } from "@/components/ui";
 import { fmtDateTime, statusColor } from "@/lib/utils";
 import { verifyIssueAction } from "./actions";
 
@@ -15,6 +15,7 @@ export default async function StudentIssueDetail({ params }: { params: { id: str
       assignedOfficer: true,
       updates: { where: { visibleToStudent: true }, orderBy: { createdAt: "asc" }, include: { author: true } },
       actionPoints: { orderBy: [{ status: "asc" }, { orderIdx: "asc" }, { createdAt: "asc" }] },
+      attachments: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!issue || (issue.studentId && issue.studentId !== s.sub)) notFound();
@@ -37,6 +38,7 @@ export default async function StudentIssueDetail({ params }: { params: { id: str
       </div>
 
       <LoopSteps steps={["Submitted","Received","Assigned","In Progress","Resolved","Verified"]} current={current} />
+      <div><SLAPill createdAt={issue.createdAt} priority={issue.priority} status={issue.status} resolvedAt={issue.resolvedAt} /></div>
 
       <div className="grid md:grid-cols-3 gap-4">
         <div className="card-p md:col-span-2">
@@ -109,6 +111,8 @@ export default async function StudentIssueDetail({ params }: { params: { id: str
           </ol>
         )}
       </div>
+
+      <AttachmentList attachments={issue.attachments} title="Evidence you shared" />
 
       <div className="card-p">
         <div className="section-title mb-3">Timeline</div>

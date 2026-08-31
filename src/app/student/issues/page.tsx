@@ -1,7 +1,7 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { Badge, LoopSteps } from "@/components/ui";
+import { Badge, LoopSteps, SLAPill } from "@/components/ui";
 import { fmtDate, statusColor } from "@/lib/utils";
 
 export default async function MyIssues() {
@@ -16,7 +16,10 @@ export default async function MyIssues() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">My Issues</h1>
-        <Link href="/student/issues/new" className="btn-primary">Raise an Issue</Link>
+        <div className="flex gap-2">
+          <Link href="/student/issues/board" className="btn-outline">Community board</Link>
+          <Link href="/student/issues/new" className="btn-primary">Raise an Issue</Link>
+        </div>
       </div>
       {issues.length === 0 && <div className="card-p">You haven&apos;t raised any issues yet.</div>}
       <div className="space-y-3">
@@ -27,7 +30,10 @@ export default async function MyIssues() {
                 <Link href={`/student/issues/${i.id}`} className="font-semibold hover:underline">{i.title}</Link>
                 <div className="text-xs text-on-surface-variant">{i.category} • {i.department?.name || "Unrouted"} • {fmtDate(i.createdAt)}</div>
               </div>
-              <Badge className={statusColor(i.status)}>{i.status}</Badge>
+              <div className="flex items-center gap-2">
+                <SLAPill createdAt={i.createdAt} priority={i.priority} status={i.status} resolvedAt={i.resolvedAt} />
+                <Badge className={statusColor(i.status)}>{i.status}</Badge>
+              </div>
             </div>
             <div className="mt-3">
               <LoopSteps steps={["Submitted","Received","Assigned","In Progress","Resolved","Verified"]}

@@ -1,6 +1,6 @@
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Badge } from "@/components/ui";
+import { Badge, SLAPill } from "@/components/ui";
 import Link from "next/link";
 import { fmtDate, statusColor } from "@/lib/utils";
 
@@ -29,19 +29,20 @@ export default async function DepartmentCases({ searchParams }: { searchParams: 
       </div>
       <div className="card">
         <table className="table">
-          <thead><tr><th>Title</th><th>Category</th><th>Priority</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
+          <thead><tr><th>Title</th><th>Category</th><th>Priority</th><th>SLA</th><th>Submitted</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {list.map((i) => (
               <tr key={i.id}>
                 <td className="font-medium">{i.title}</td>
                 <td>{i.category}</td>
                 <td>{i.priority}</td>
+                <td><SLAPill createdAt={i.createdAt} priority={i.priority} status={i.status} resolvedAt={i.resolvedAt} /></td>
                 <td>{fmtDate(i.createdAt)}</td>
                 <td><Badge className={statusColor(i.status)}>{i.status}</Badge></td>
                 <td><Link className="link text-sm" href={`/department/cases/${i.id}`}>Open</Link></td>
               </tr>
             ))}
-            {list.length === 0 && <tr><td colSpan={6} className="text-center text-on-surface-variant py-8">No matching cases.</td></tr>}
+            {list.length === 0 && <tr><td colSpan={7} className="text-center text-on-surface-variant py-8">No matching cases.</td></tr>}
           </tbody>
         </table>
       </div>
