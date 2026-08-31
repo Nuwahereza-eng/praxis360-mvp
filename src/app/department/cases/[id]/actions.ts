@@ -119,6 +119,69 @@ export async function officerActionAction(formData: FormData) {
     if (ap && ap.issueId === issueId) {
       await prisma.issueActionPoint.delete({ where: { id: apId } });
     }
+  } else if (op === "FORWARD") {
+    const targetDepartmentId = String(formData.get("targetDepartmentId") || "");
+    const reason = String(formData.get("forwardReason") || "").trim();
+    if (!targetDepartmentId || targetDepartmentId === me.departmentId) return;
+    const target = await prisma.department.findUnique({ where: { id: targetDepartmentId } });
+    if (!target) return;
+    const fromDept = await prisma.department.findUnique({ where: { id: me.departmentId } });
+
+    // Reassign the issue to the target department. Clear the current officer and drop
+    // status back to RECEIVED so the receiving department can triage it.
+    await prisma.issue.update({
+      where: { id: issueId },
+      data: {
+        departmentId: targetDepartmentId,
+        assignedOfficerId: null,
+        status: "RECEIVED",
+      },
+    });
+
+    // Internal audit note (visible only to staff).
+    await prisma.issueUpdate.create({
+      data: {
+        issueId,
+        authorId: me.id,
+        message: `Forwarded from ${fromDept?.name ?? "previous department"} to ${target.name}${reason ? ` — ${reason}` : ""}.`,
+        type: "NOTE",
+        visibleToStudent: false,
+      },
+    });
+
+    // Public update so the student sees the transfer.
+    await prisma.issueUpdate.create({
+      data: {
+        issueId,
+        authorId: me.id,
+        message: `Your issue has been forwarded to ${target.name} — the department best placed to handle it.${reason ? ` Reason: ${reason}` : ""}`,
+        type: "STATUS_CHANGE",
+        visibleToStudent: true,
+      },
+    });
+
+    // Notify all officers in the receiving department that a new case has landed.
+    const receivingOfficers = await prisma.user.findMany({
+      where: { departmentId: targetDepartmentId, role: "DEPARTMENT_OFFICER" },
+      select: { id: true },
+    });
+    if (receivingOfficers.length > 0) {
+      await prisma.notification.createMany({
+        data: receivingOfficers.map((o) => ({
+          userId: o.id,
+          title: "Case forwarded to your department",
+          message: `“${issue.title}” was forwarded from ${fromDept?.name ?? "another department"}.`,
+          type: "ISSUE",
+          relatedEntityType: "ISSUE",
+          relatedEntityId: issueId,
+        })),
+      });
+    }
+
+    await notifyStudent(
+      "Your issue was forwarded",
+      `Your issue is now with ${target.name} for faster handling.`,
+    );
   }
 
   revalidatePath(`/department/cases/${issueId}`);

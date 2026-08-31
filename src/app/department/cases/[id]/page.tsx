@@ -21,6 +21,12 @@ export default async function CaseDetail({ params }: { params: { id: string } })
   });
   if (!issue || (issue.departmentId && issue.departmentId !== me?.departmentId)) notFound();
 
+  // Departments this case can be forwarded to (any active department except the current one).
+  const otherDepartments = await prisma.department.findMany({
+    where: { id: { not: me?.departmentId ?? "" } },
+    orderBy: [{ type: "asc" }, { name: "asc" }],
+  });
+
   const stepIndex = ["SUBMITTED","RECEIVED","ASSIGNED","IN_PROGRESS","RESOLVED","VERIFIED"].indexOf(issue.status);
   const identityLabel = issue.privacyMode === "ANONYMOUS" ? "Anonymous student"
     : issue.privacyMode === "CONFIDENTIAL" ? "Confidential — identity hidden in reports"
@@ -67,6 +73,55 @@ export default async function CaseDetail({ params }: { params: { id: string } })
             </div>
           </form>
         </div>
+      </div>
+
+      {/* Forward to another department — for cases the student routed incorrectly. */}
+      <div className="card-p border-info/30 bg-info-container/30">
+        <div className="flex items-start gap-3 mb-3">
+          <div className="text-2xl">↪️</div>
+          <div>
+            <div className="section-title">Wrong department?</div>
+            <p className="text-xs text-on-surface-variant">
+              If this case belongs elsewhere, forward it. The receiving department will be notified and the student will see a public update.
+            </p>
+          </div>
+        </div>
+        <form action={officerActionAction} className="grid md:grid-cols-3 gap-2">
+          <input type="hidden" name="issueId" value={issue.id} />
+          <input type="hidden" name="op" value="FORWARD" />
+          <select name="targetDepartmentId" required className="input md:col-span-1" defaultValue="">
+            <option value="" disabled>Choose department…</option>
+            {(() => {
+              const academic = otherDepartments.filter((d) => d.type === "ACADEMIC");
+              const service = otherDepartments.filter((d) => d.type !== "ACADEMIC");
+              return (
+                <>
+                  {service.length > 0 && (
+                    <optgroup label="Service departments">
+                      {service.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {academic.length > 0 && (
+                    <optgroup label="Academic departments">
+                      {academic.map((d) => (
+                        <option key={d.id} value={d.id}>{d.name}</option>
+                      ))}
+                    </optgroup>
+                  )}
+                </>
+              );
+            })()}
+          </select>
+          <input
+            name="forwardReason"
+            className="input md:col-span-1"
+            placeholder="Optional reason (visible to student)"
+            maxLength={200}
+          />
+          <button type="submit" className="btn-primary md:col-span-1 text-sm">Forward case →</button>
+        </form>
       </div>
 
       {/* Action Points — concrete steps this department commits to. Visible to the student. */}
