@@ -39,22 +39,26 @@ export function EmptyState({ title, hint }: { title: string; hint?: string }) {
 }
 
 export function LoopSteps({ steps, current }: { steps: string[]; current: number }) {
+  if (!steps.length) return null;
+  const safeIndex = Math.min(Math.max(current, 0), steps.length - 1);
+  const label = steps[safeIndex];
+  const isDone = current >= steps.length - 1;
   return (
-    <ol className="flex flex-wrap items-center gap-2 text-xs">
-      {steps.map((s, i) => (
-        <li key={s} className="flex items-center gap-2">
-          <span className={cn(
-            "px-2.5 py-1 rounded-full font-semibold",
-            i < current ? "bg-success-container text-success"
-              : i === current ? "bg-primary text-on-primary"
-              : "bg-surface-container text-on-surface-variant",
-          )}>
-            {s}
-          </span>
-          {i < steps.length - 1 && <span className="text-on-surface-variant">→</span>}
-        </li>
-      ))}
-    </ol>
+    <div className="inline-flex items-center gap-2">
+      <span
+        className={cn(
+          "px-3 py-1 rounded-full text-xs font-semibold",
+          isDone
+            ? "bg-success-container text-success"
+            : "bg-primary text-on-primary",
+        )}
+      >
+        {label}
+      </span>
+      <span className="text-xs text-on-surface-variant">
+        Step {safeIndex + 1} of {steps.length}
+      </span>
+    </div>
   );
 }
 
